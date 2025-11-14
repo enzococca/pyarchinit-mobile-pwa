@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="frontend/public/logo.svg" alt="PyArchInit Mobile PWA Logo" width="200"/>
+</p>
+
 # PyArchInit Mobile PWA
 
 > Offline-first Progressive Web Application for archaeological field documentation with AI-powered audio transcription and intelligent data extraction
@@ -395,7 +399,7 @@ Compatible with PyArchInit's GPL-3.0 license.
 
 - **Repository**: https://github.com/enzococca/pyarchinit-mobile-pwa
 - **Issues**: https://github.com/enzococca/pyarchinit-mobile-pwa/issues
-- **PyArchInit**: https://pypi.org/project/pyarchinit/
+- **PyArchInit**: https://pyarchinit.org
 
 ---
 
