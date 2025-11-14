@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="#8B4513" opacity="0.9"/>
+
+  <!-- Archaeological layers effect -->
+  <circle cx="256" cy="256" r="220" fill="none" stroke="#D2691E" stroke-width="2" opacity="0.3"/>
+  <circle cx="256" cy="256" r="200" fill="none" stroke="#CD853F" stroke-width="2" opacity="0.3"/>
+
+  <!-- Large stylized "P" for PyArchInit -->
+  <g transform="translate(120, 140)">
+    <!-- P stem -->
+    <rect x="0" y="0" width="50" height="240" fill="#FFFFFF" rx="8"/>
+    <!-- P bowl -->
+    <path d="M 50 0 L 150 0 C 180 0 200 20 200 50 L 200 90 C 200 120 180 140 150 140 L 50 140 Z"
+          fill="#FFFFFF"/>
+    <!-- Inner archaeological detail -->
+    <rect x="15" y="15" width="20" height="210" fill="#CD853F" opacity="0.3" rx="4"/>
+  </g>
+
+  <!-- Mobile phone icon overlay -->
+  <g transform="translate(320, 200)">
+    <!-- Phone body -->
+    <rect x="0" y="0" width="80" height="130" rx="12" fill="#FFFFFF" stroke="#8B4513" stroke-width="4"/>
+    <!-- Screen -->
+    <rect x="8" y="15" width="64" height="90" rx="4" fill="#4A90E2"/>
+    <!-- Home button -->
+    <circle cx="40" cy="115" r="8" fill="#8B4513"/>
+    <!-- Signal waves -->
+    <path d="M 20 25 Q 40 20 60 25" fill="none" stroke="#FFFFFF" stroke-width="2" opacity="0.6"/>
+    <path d="M 20 35 Q 40 30 60 35" fill="none" stroke="#FFFFFF" stroke-width="2" opacity="0.4"/>
+  </g>
+
+  <!-- Text: PyArchInit -->
+  <text x="256" y="440" font-family="Arial, sans-serif" font-size="42" font-weight="bold"
+        fill="#FFFFFF" text-anchor="middle">PyArchInit</text>
+
+  <!-- Text: Mobile PWA -->
+  <text x="256" y="475" font-family="Arial, sans-serif" font-size="28" font-weight="normal"
+        fill="#FFE4B5" text-anchor="middle">Mobile PWA</text>
+</svg>

@@ -1,11 +1,11 @@
 {
-  "name": "PyArchInit Mobile",
+  "name": "PyArchInit Mobile PWA",
   "short_name": "PyArchInit",
-  "description": "Sistema mobile per documentazione archeologica sul campo",
+  "description": "Offline-first mobile app for archaeological field documentation with AI-powered transcription",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#2196f3",
+  "theme_color": "#8B4513",
   "orientation": "portrait",
   "icons": [
     {
