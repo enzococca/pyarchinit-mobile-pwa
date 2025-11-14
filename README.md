@@ -307,10 +307,30 @@ Output:
 }
 ```
 
-## 🐳 Docker Deployment
+## 🚀 Production Deployment
+
+For detailed production deployment instructions, see **[DEPLOYMENT.md](DEPLOYMENT.md)**.
+
+The deployment guide covers:
+- **VPS deployment with Docker** (recommended)
+- **Nginx reverse proxy** with SSL/HTTPS
+- **Database setup** (PostgreSQL)
+- **Media storage** configuration (local or S3)
+- **Security hardening** (firewall, rate limiting, Fail2ban)
+- **Monitoring and logging** setup
+- **Backup strategies** for database and media files
+- **Cost estimation** for different deployment sizes
+
+Quick production deployment with Docker:
+```bash
+# See DEPLOYMENT.md for full instructions and configuration
+docker-compose -f docker-compose.prod.yml up -d --build
+```
+
+## 🐳 Docker Development
 
 ```bash
-# Build and run with Docker Compose
+# Build and run with Docker Compose (development)
 docker-compose up -d
 
 # Services:
