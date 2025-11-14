@@ -307,6 +307,27 @@ Output:
 }
 ```
 
+## 📸 Screenshots
+
+### Audio Notes & AI Processing
+
+<p align="center">
+  <img src="docs/images/01-audio-notes-transcription.jpg" width="250" alt="Audio Notes Transcription">
+  <img src="docs/images/04-complete-note-preview.jpg" width="250" alt="Complete Note Preview">
+  <img src="docs/images/05-settings-page.jpg" width="250" alt="Settings Page">
+</p>
+
+*Left to right: Audio transcription with 95% AI confidence | Complete note preview with transcription & interpretation | Settings page*
+
+### Note Preview & Data Extraction
+
+<p align="center">
+  <img src="docs/images/02-note-preview-extracted-fields.jpg" width="250" alt="Extracted Fields">
+  <img src="docs/images/03-stratigraphic-relationships.jpg" width="250" alt="Stratigraphic Relationships">
+</p>
+
+*Left to right: Extracted archaeological fields with edit option | Stratigraphic relationships editor (Si lega a, Taglia)*
+
 ## 🚀 Production Deployment
 
 For detailed production deployment instructions, see **[DEPLOYMENT.md](DEPLOYMENT.md)**.
