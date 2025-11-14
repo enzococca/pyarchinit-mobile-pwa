@@ -419,14 +419,14 @@ function NotePreview({ note, onClose, onSave, onRefresh }) {
       {showAreaDialog && (
         <div className="area-dialog-overlay">
           <div className="area-dialog">
-            <h3>⚠️ Campo Obbligatorio Mancante</h3>
-            <p>Il campo <strong>Area</strong> è obbligatorio per salvare nel database.</p>
-            <p>Inserisci l'Area per questa US:</p>
+            <h3>⚠️ Required Field Missing</h3>
+            <p>The <strong>Area</strong> field is required to save to the database.</p>
+            <p>Enter the Area for this US:</p>
             <input
               type="text"
               value={missingArea}
               onChange={(e) => setMissingArea(e.target.value)}
-              placeholder="Es: A, B, 1000, etc."
+              placeholder="E.g.: A, B, 1000, etc."
               className="area-input"
               autoFocus
             />
@@ -437,15 +437,15 @@ function NotePreview({ note, onClose, onSave, onRefresh }) {
                     setEditedFields({ ...editedFields, area: missingArea.trim() });
                     setShowAreaDialog(false);
                     setMissingArea('');
-                    // Richiama il salvataggio dopo aver aggiunto l'Area
+                    // Retry save after adding Area
                     setTimeout(() => handleConfirmAndSave(), 100);
                   } else {
-                    alert('Inserisci un valore per Area');
+                    alert('Enter a value for Area');
                   }
                 }}
                 className="area-btn area-btn-save"
               >
-                💾 Salva con Area
+                💾 Save with Area
               </button>
               <button
                 onClick={() => {
@@ -454,7 +454,7 @@ function NotePreview({ note, onClose, onSave, onRefresh }) {
                 }}
                 className="area-btn area-btn-cancel"
               >
-                ✕ Annulla
+                ✕ Cancel
               </button>
             </div>
           </div>

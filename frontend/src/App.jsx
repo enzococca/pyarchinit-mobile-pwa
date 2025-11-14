@@ -42,20 +42,20 @@ export default function App() {
     // Init DB
     initDB();
     
-    // Carica settings salvati
+    // Load saved settings
     loadSettings();
-    
-    // Setup sync automatico
+
+    // Setup automatic sync
     setupAutoSync((result) => {
-      alert(`Sync completato: ${result.completed}/${result.total} elementi`);
+      alert(`Sync completed: ${result.completed}/${result.total} items`);
       refreshData();
     });
-    
-    // Monitor connessione
+
+    // Monitor connection
     window.addEventListener('online', () => setOnline(true));
     window.addEventListener('offline', () => setOnline(false));
-    
-    // Carica dati iniziali
+
+    // Load initial data
     refreshData();
     
     return () => {
@@ -220,7 +220,7 @@ export default function App() {
               {online ? '🟢 Online' : '🔴 Offline'}
             </span>
             {syncStats.total > 0 && !syncing && (
-              <span className="sync-badge">{syncStats.total} da sync</span>
+              <span className="sync-badge">{syncStats.total} to sync</span>
             )}
           </div>
         </div>
@@ -334,44 +334,44 @@ export default function App() {
         </div>
       )}
 
-      {/* Cattura Foto */}
+      {/* Photo Capture */}
       {currentView === 'photo' && (
         <div className="view-panel">
           <button onClick={() => setCurrentView('home')} className="btn-back">
-            ← Indietro
+            ← Back
           </button>
-          
-          <h2>📷 Scatta Foto</h2>
-          
+
+          <h2>📷 Take Photo</h2>
+
           <div className="photo-settings">
             <div className="form-group">
-              <label>Tipo Entità</label>
+              <label>Entity Type</label>
               <select value={entityType} onChange={(e) => setEntityType(e.target.value)}>
-                <option value="US">US - Unità Stratigrafica</option>
-                <option value="TOMBA">Tomba</option>
-                <option value="MATERIALE">Materiale</option>
-                <option value="STRUTTURA">Struttura</option>
+                <option value="US">US - Stratigraphic Unit</option>
+                <option value="TOMBA">Tomb</option>
+                <option value="MATERIALE">Material</option>
+                <option value="STRUTTURA">Structure</option>
               </select>
             </div>
 
             <div className="form-group">
-              <label>ID Entità</label>
+              <label>Entity ID</label>
               <input
                 type="number"
                 value={entityId}
                 onChange={(e) => setEntityId(e.target.value)}
-                placeholder={entityType === 'US' ? 'Numero US' : 'ID'}
+                placeholder={entityType === 'US' ? 'US Number' : 'ID'}
               />
             </div>
 
             {entityType === 'MATERIALE' && (
               <div className="form-group">
-                <label>US di Rinvenimento</label>
+                <label>Discovery US</label>
                 <input
                   type="number"
                   value={us}
                   onChange={(e) => setUs(e.target.value)}
-                  placeholder="Numero US"
+                  placeholder="US Number"
                 />
               </div>
             )}
@@ -588,18 +588,18 @@ export default function App() {
         />
       )}
 
-      {/* Lista Immagini */}
+      {/* Images List */}
       {currentView === 'images' && (
         <div className="view-panel">
           <button onClick={() => setCurrentView('home')} className="btn-back">
-            ← Indietro
+            ← Back
           </button>
-          
-          <h2>🖼️ Foto</h2>
-          
+
+          <h2>🖼️ Photos</h2>
+
           <div className="images-grid">
             {images.length === 0 ? (
-              <p className="empty-state">Nessuna foto scattata</p>
+              <p className="empty-state">No photos taken</p>
             ) : (
               images.map(img => (
                 <div key={img.id} className="image-card">

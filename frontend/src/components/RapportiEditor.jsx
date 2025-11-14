@@ -112,7 +112,7 @@ function RapportiEditor({ value, onChange, sito }) {
   return (
     <div className="rapporti-editor">
       <div className="rapporti-header">
-        <label>Rapporti Stratigrafici</label>
+        <label>Stratigraphic Relationships</label>
         <div className="mode-toggle">
           <button
             onClick={() => switchMode('visual')}
@@ -167,7 +167,7 @@ function RapportiEditor({ value, onChange, sito }) {
 
                     <input
                       type="text"
-                      placeholder="Sito"
+                      placeholder="Site"
                       value={rel[3] || ''}
                       onChange={(e) => updateRelationship(index, 'sito', e.target.value)}
                       className="rapport-sito"
@@ -196,14 +196,14 @@ function RapportiEditor({ value, onChange, sito }) {
             value={jsonText}
             onChange={(e) => handleJsonChange(e.target.value)}
             className="json-textarea"
-            placeholder='[["Copre", "2045", "1", "Sito"], ...]'
+            placeholder='[["Copre", "2045", "1", "Site"], ...]'
             rows={10}
           />
           {jsonError && (
             <div className="json-error">⚠️ {jsonError}</div>
           )}
           <div className="json-help">
-            Format: [["Type", "US", "Area", "Sito"], ...]
+            Format: [["Type", "US", "Area", "Site"], ...]
           </div>
         </div>
       )}

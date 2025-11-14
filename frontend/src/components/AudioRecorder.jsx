@@ -26,19 +26,19 @@ export default function AudioRecorder({ sito, recordedBy, onRecordingComplete })
 
   const startRecording = async () => {
     try {
-      // Richiedi permesso microfono
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      // Request microphone permission
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           sampleRate: 44100
-        } 
+        }
       });
-      
+
       streamRef.current = stream;
 
-      // Determina tipo MIME supportato
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm') 
+      // Determine supported MIME type
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm')
         ? 'audio/webm'
         : 'audio/mp4';
 
@@ -76,8 +76,8 @@ export default function AudioRecorder({ sito, recordedBy, onRecordingComplete })
       }, 1000);
 
     } catch (error) {
-      console.error('Errore avvio registrazione:', error);
-      alert('Errore accesso microfono. Verifica i permessi.');
+      console.error('Error starting recording:', error);
+      alert('Microphone access error. Check permissions.');
     }
   };
 
@@ -113,24 +113,24 @@ export default function AudioRecorder({ sito, recordedBy, onRecordingComplete })
     if (!audioBlob) return;
 
     try {
-      // Converti blob a base64
+      // Convert blob to base64
       const base64 = await blobToBase64(audioBlob);
-      
-      // Ottieni coordinate GPS se disponibili
+
+      // Get GPS coordinates if available
       let gpsLat = null;
       let gpsLon = null;
-      
+
       if (navigator.geolocation) {
         try {
           const position = await getCurrentPosition();
           gpsLat = position.coords.latitude;
           gpsLon = position.coords.longitude;
         } catch (e) {
-          console.log('GPS non disponibile');
+          console.log('GPS not available');
         }
       }
 
-      // Salva in locale
+      // Save locally
       const noteId = await saveAudioNoteOffline({
         audioBlob: base64,
         filename: `note_${Date.now()}.webm`,
@@ -141,19 +141,19 @@ export default function AudioRecorder({ sito, recordedBy, onRecordingComplete })
         gpsLon
       });
 
-      alert('Nota salvata in locale. Verrà sincronizzata quando online.');
-      
+      alert('Note saved locally. It will be synced when online.');
+
       // Reset
       setAudioBlob(null);
       setDuration(0);
-      
+
       if (onRecordingComplete) {
         onRecordingComplete(noteId);
       }
 
     } catch (error) {
-      console.error('Errore salvataggio:', error);
-      alert('Errore salvataggio nota');
+      console.error('Error saving:', error);
+      alert('Error saving note');
     }
   };
 
@@ -197,7 +197,7 @@ export default function AudioRecorder({ sito, recordedBy, onRecordingComplete })
         {isRecording && (
           <div className="recording-indicator">
             <span className="pulse"></span>
-            {isPaused ? 'IN PAUSA' : 'REGISTRAZIONE'}
+            {isPaused ? 'PAUSED' : 'RECORDING'}
           </div>
         )}
       </div>
@@ -205,18 +205,18 @@ export default function AudioRecorder({ sito, recordedBy, onRecordingComplete })
       {!isRecording && !audioBlob && (
         <>
           <div className="examples-box">
-            <h4>💡 Esempi di note vocali:</h4>
+            <h4>💡 Voice note examples:</h4>
             <div className="example-item">
-              <strong>US (Unità Stratigrafica):</strong>
-              <p>"US 2045, strato di terra marrone scuro con inclusi di laterizi frammentati, periodo romano imperiale, scavato il 15 novembre"</p>
+              <strong>US (Stratigraphic Unit):</strong>
+              <p>"US 2045, dark brown soil layer with fragmented brick inclusions, Roman imperial period, excavated on November 15"</p>
             </div>
             <div className="example-item">
-              <strong>Materiale:</strong>
-              <p>"Frammento di ceramica a vernice nera, diametro circa 8 centimetri, trovato in US 3012, possibile periodo tardo repubblicano"</p>
+              <strong>Material:</strong>
+              <p>"Black glaze ceramic fragment, diameter approximately 8 centimeters, found in US 3012, possible late Republican period"</p>
             </div>
             <div className="example-item">
-              <strong>Struttura:</strong>
-              <p>"Muro in opera quadrata, orientamento nord-sud, altezza conservata 1.2 metri, larghezza 0.6 metri, buono stato di conservazione"</p>
+              <strong>Structure:</strong>
+              <p>"Wall in opus quadratum, north-south orientation, preserved height 1.2 meters, width 0.6 meters, good state of preservation"</p>
             </div>
           </div>
 
@@ -224,7 +224,7 @@ export default function AudioRecorder({ sito, recordedBy, onRecordingComplete })
             className="btn-record"
             onClick={startRecording}
           >
-            🎤 INIZIA REGISTRAZIONE
+            🎤 START RECORDING
           </button>
         </>
       )}
@@ -232,29 +232,29 @@ export default function AudioRecorder({ sito, recordedBy, onRecordingComplete })
       {isRecording && (
         <div className="recording-controls">
           {!isPaused ? (
-            <button onClick={pauseRecording}>⏸️ Pausa</button>
+            <button onClick={pauseRecording}>⏸️ Pause</button>
           ) : (
-            <button onClick={resumeRecording}>▶️ Riprendi</button>
+            <button onClick={resumeRecording}>▶️ Resume</button>
           )}
-          
+
           <button onClick={stopRecording}>⏹️ Stop</button>
         </div>
       )}
 
       {audioBlob && (
         <div className="playback-controls">
-          <audio 
-            src={URL.createObjectURL(audioBlob)} 
-            controls 
+          <audio
+            src={URL.createObjectURL(audioBlob)}
+            controls
             style={{ width: '100%', marginBottom: '1rem' }}
           />
-          
+
           <div className="action-buttons">
             <button onClick={saveRecording} className="btn-save">
-              💾 Salva Nota
+              💾 Save Note
             </button>
             <button onClick={discardRecording} className="btn-discard">
-              🗑️ Scarta
+              🗑️ Discard
             </button>
           </div>
         </div>

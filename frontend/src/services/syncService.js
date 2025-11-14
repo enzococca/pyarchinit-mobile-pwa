@@ -12,18 +12,18 @@ import {
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 /**
- * Verifica connessione internet
+ * Check internet connection
  */
 export function isOnline() {
   return navigator.onLine;
 }
 
 /**
- * Sincronizza tutti i dati pending
+ * Sync all pending data
  */
 export async function syncAll(onProgress) {
   if (!isOnline()) {
-    throw new Error('Nessuna connessione internet');
+    throw new Error('No internet connection');
   }
 
   const queue = await getSyncQueue();
@@ -51,7 +51,7 @@ export async function syncAll(onProgress) {
       }
 
     } catch (error) {
-      console.error(`Errore sync item ${item.id}:`, error);
+      console.error(`Error syncing item ${item.id}:`, error);
       errors.push({
         item,
         error: error.message
@@ -67,15 +67,15 @@ export async function syncAll(onProgress) {
 }
 
 /**
- * Sincronizza singola nota audio
+ * Sync single audio note
  */
 async function syncAudioNote(queueItem) {
   const note = await getAudioNote(queueItem.localId);
   
-  // Prepara FormData
+  // Prepare FormData
   const formData = new FormData();
-  
-  // Converti audio da base64 a Blob
+
+  // Convert audio from base64 to Blob
   const audioBlob = base64ToBlob(note.audioBlob);
   formData.append('file', audioBlob, note.filename || 'audio.webm');
   
@@ -93,36 +93,36 @@ async function syncAudioNote(queueItem) {
 
   const serverNoteId = response.data.note_id;
 
-  // Avvia processing
+  // Start processing
   const processResponse = await axios.post(`${API_BASE}/notes/${serverNoteId}/process`);
 
-  // Estrai trascrizione e interpretazione dal processing
+  // Extract transcription and interpretation from processing
   const transcription = processResponse.data.transcription?.text;
   const interpretation = processResponse.data.interpretation;
 
-  // Serializza interpretation in modo sicuro (evita circular references)
+  // Serialize interpretation safely (avoid circular references)
   console.log('[syncService] FIXED VERSION v3.0 - Safe serialization for interpretation');
   let interpretationStr = null;
   if (interpretation) {
     try {
-      // Prova prima con JSON.stringify normale
+      // Try with normal JSON.stringify first
       interpretationStr = JSON.stringify(interpretation);
     } catch (e) {
-      // Se fallisce per circular refs, estrai solo i valori primitivi
+      // If it fails due to circular refs, extract only primitive values
       console.warn('[syncService] Circular reference in interpretation, using safe serialization');
       const safeInterpretation = {};
       for (const [key, value] of Object.entries(interpretation)) {
         if (value !== null && value !== undefined) {
           if (typeof value === 'object' && !Array.isArray(value)) {
-            // Converti oggetti complessi in stringhe
+            // Convert complex objects to strings
             safeInterpretation[key] = String(value);
           } else if (Array.isArray(value)) {
-            // Mantieni array ma converti elementi complessi
+            // Keep arrays but convert complex elements
             safeInterpretation[key] = value.map(v =>
               typeof v === 'object' ? String(v) : v
             );
           } else {
-            // Mantieni valori primitivi
+            // Keep primitive values
             safeInterpretation[key] = value;
           }
         }
@@ -131,7 +131,7 @@ async function syncAudioNote(queueItem) {
     }
   }
 
-  // Aggiorna record locale con trascrizione e interpretazione
+  // Update local record with transcription and interpretation
   await updateAudioNote(queueItem.localId, {
     synced: true,
     serverNoteId,
@@ -145,15 +145,15 @@ async function syncAudioNote(queueItem) {
 }
 
 /**
- * Sincronizza singola immagine
+ * Sync single image
  */
 async function syncImage(queueItem) {
   const imageData = queueItem.data;
-  
-  // Prepara FormData
+
+  // Prepare FormData
   const formData = new FormData();
-  
-  // Converti immagine da base64 a Blob
+
+  // Convert image from base64 to Blob
   const imageBlob = base64ToBlob(imageData.imageBlob);
   formData.append('file', imageBlob, imageData.filename || 'image.jpg');
   
@@ -177,14 +177,14 @@ async function syncImage(queueItem) {
 }
 
 /**
- * Sincronizza singolo item manualmente
+ * Sync single item manually
  */
 export async function syncItem(queueItemId) {
   const queue = await getSyncQueue();
   const item = queue.find(i => i.id === queueItemId);
-  
+
   if (!item) {
-    throw new Error('Item non trovato in queue');
+    throw new Error('Item not found in queue');
   }
 
   if (item.type === 'audio_note') {
@@ -197,32 +197,32 @@ export async function syncItem(queueItemId) {
 }
 
 /**
- * Setup auto-sync quando torna online
+ * Setup auto-sync when coming back online
  */
 export function setupAutoSync(onSyncComplete) {
   window.addEventListener('online', async () => {
-    console.log('Connessione ripristinata, avvio sincronizzazione...');
-    
+    console.log('Connection restored, starting sync...');
+
     try {
       const result = await syncAll((progress) => {
         console.log(`Sync: ${progress.completed}/${progress.total}`);
       });
-      
+
       if (onSyncComplete) {
         onSyncComplete(result);
       }
     } catch (error) {
-      console.error('Errore auto-sync:', error);
+      console.error('Auto-sync error:', error);
     }
   });
 }
 
 /**
- * Fetch con fallback offline
+ * Fetch with offline fallback
  */
 export async function fetchWithOffline(url, options = {}) {
   if (!isOnline()) {
-    throw new Error('Offline - dati non disponibili');
+    throw new Error('Offline - data not available');
   }
 
   try {
@@ -230,14 +230,14 @@ export async function fetchWithOffline(url, options = {}) {
     return response.data;
   } catch (error) {
     if (error.code === 'ERR_NETWORK') {
-      throw new Error('Errore di rete');
+      throw new Error('Network error');
     }
     throw error;
   }
 }
 
 /**
- * Ottieni statistiche sync
+ * Get sync statistics
  */
 export async function getSyncStats() {
   const queue = await getSyncQueue();
@@ -269,18 +269,18 @@ export async function getSyncStats() {
 }
 
 /**
- * Recupera note processate dal server e aggiorna database locale
+ * Fetch processed notes from server and update local database
  */
 export async function refreshProcessedNotes() {
   if (!isOnline()) {
-    throw new Error('Nessuna connessione internet');
+    throw new Error('No internet connection');
   }
 
   try {
-    // Ottieni lista note dal server
+    // Get notes list from server
     const response = await axios.get(`${API_BASE}/notes`);
 
-    // Verifica che serverNotes sia un array valido
+    // Verify that serverNotes is a valid array
     const serverNotes = response.data?.notes || response.data || [];
     if (!Array.isArray(serverNotes)) {
       console.warn('Server notes is not an array:', typeof serverNotes);
@@ -289,16 +289,16 @@ export async function refreshProcessedNotes() {
 
     let updated = 0;
 
-    // Per ogni nota con serverNoteId, recupera i dettagli dal server
+    // For each note with serverNoteId, fetch details from server
     const localNotes = await getAllAudioNotes();
 
     for (const localNote of localNotes) {
       if (localNote.serverNoteId) {
-        // Trova la nota corrispondente dal server
+        // Find corresponding note from server
         const serverNote = serverNotes.find(n => n.id === localNote.serverNoteId);
 
         if (serverNote && serverNote.status === 'processed' && serverNote.transcription) {
-          // Aggiorna la nota locale con i dati del server
+          // Update local note with server data
           await updateAudioNote(localNote.id, {
             transcription: serverNote.transcription,
             interpretation: serverNote.ai_interpretation || null,
@@ -311,13 +311,13 @@ export async function refreshProcessedNotes() {
 
     return { updated, total: localNotes.length };
   } catch (error) {
-    // Estrai solo le proprietà sicure dall'errore
+    // Extract only safe properties from error
     const safeError = {
       message: error.message || 'Unknown error',
       status: error.response?.status,
       statusText: error.response?.statusText
     };
-    console.error('Errore refresh note:', safeError);
+    console.error('Error refreshing notes:', safeError);
     throw new Error(safeError.message);
   }
 }

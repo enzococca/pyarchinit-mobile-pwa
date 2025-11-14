@@ -19,23 +19,23 @@ export default function PhotoCapture({
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
 
-  // Apri file picker per caricare da galleria
+  // Open file picker to upload from gallery
   const openFilePicker = () => {
     fileInputRef.current?.click();
   };
 
-  // Gestisci file selezionato da galleria
+  // Handle file selected from gallery
   const handleFileSelect = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Valida tipo
+    // Validate type
     if (!file.type.startsWith('image/')) {
-      alert('Seleziona un file immagine');
+      alert('Select an image file');
       return;
     }
 
-    // Crea preview
+    // Create preview
     const reader = new FileReader();
     reader.onload = (e) => {
       setCapturedImage(e.target.result);
@@ -43,28 +43,28 @@ export default function PhotoCapture({
     reader.readAsDataURL(file);
   };
 
-  // Apri camera nativa
+  // Open native camera
   const openCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment', // Camera posteriore
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment', // Rear camera
           width: { ideal: 1920 },
           height: { ideal: 1080 }
-        } 
+        }
       });
-      
+
       streamRef.current = stream;
       videoRef.current.srcObject = stream;
       setShowCamera(true);
 
     } catch (error) {
-      console.error('Errore accesso camera:', error);
-      alert('Impossibile accedere alla camera. Usa "Carica da Galleria"');
+      console.error('Camera access error:', error);
+      alert('Unable to access camera. Use "Upload from Gallery"');
     }
   };
 
-  // Scatta foto
+  // Capture photo
   const capturePhoto = () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -87,7 +87,7 @@ export default function PhotoCapture({
     closeCamera();
   };
 
-  // Chiudi camera
+  // Close camera
   const closeCamera = () => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
@@ -96,29 +96,29 @@ export default function PhotoCapture({
     setShowCamera(false);
   };
 
-  // Salva immagine
+  // Save image
   const saveImage = async () => {
     if (!capturedImage) return;
 
     try {
-      // Converti data URL a Blob
+      // Convert data URL to Blob
       const blob = dataURLtoBlob(capturedImage);
-      
-      // Ottieni GPS se disponibile
+
+      // Get GPS if available
       let gpsLat = null;
       let gpsLon = null;
-      
+
       if (navigator.geolocation) {
         try {
           const position = await getCurrentPosition();
           gpsLat = position.coords.latitude;
           gpsLon = position.coords.longitude;
         } catch (e) {
-          console.log('GPS non disponibile');
+          console.log('GPS not available');
         }
       }
 
-      // Salva in locale
+      // Save locally
       const imageId = await saveImageOffline(
         {
           entityType,
@@ -135,24 +135,24 @@ export default function PhotoCapture({
         blob
       );
 
-      alert('Foto salvata. Verrà sincronizzata quando online.');
-      
+      alert('Photo saved. It will be synced when online.');
+
       // Reset
       setCapturedImage(null);
       setDescrizione('');
       setTags('');
-      
+
       if (onPhotoCapture) {
         onPhotoCapture(imageId);
       }
 
     } catch (error) {
-      console.error('Errore salvataggio foto:', error);
-      alert('Errore salvataggio foto');
+      console.error('Error saving photo:', error);
+      alert('Error saving photo');
     }
   };
 
-  // Scarta foto
+  // Discard photo
   const discardImage = () => {
     setCapturedImage(null);
     setDescrizione('');
@@ -195,30 +195,30 @@ export default function PhotoCapture({
       {!showCamera && !capturedImage && (
         <div className="capture-buttons">
           <button onClick={openCamera} className="btn-camera">
-            📷 Scatta Foto
+            📷 Take Photo
           </button>
           <button onClick={openFilePicker} className="btn-gallery">
-            🖼️ Carica da Galleria
+            🖼️ Upload from Gallery
           </button>
         </div>
       )}
 
       {showCamera && (
         <div className="camera-view">
-          <video 
-            ref={videoRef} 
-            autoPlay 
+          <video
+            ref={videoRef}
+            autoPlay
             playsInline
             className="video-preview"
           />
           <canvas ref={canvasRef} style={{ display: 'none' }} />
-          
+
           <div className="camera-controls">
             <button onClick={closeCamera} className="btn-cancel">
-              ❌ Annulla
+              ❌ Cancel
             </button>
             <button onClick={capturePhoto} className="btn-capture">
-              📸 Scatta
+              📸 Capture
             </button>
           </div>
         </div>
@@ -227,27 +227,27 @@ export default function PhotoCapture({
       {capturedImage && (
         <div className="image-review">
           <img src={capturedImage} alt="Captured" className="preview-image" />
-          
+
           <div className="metadata-form">
             <input
               type="text"
-              placeholder="Descrizione (opzionale)"
+              placeholder="Description (optional)"
               value={descrizione}
               onChange={(e) => setDescrizione(e.target.value)}
               className="input-field"
             />
-            
+
             <input
               type="text"
-              placeholder="Tags (es: ceramica,frammento)"
+              placeholder="Tags (e.g.: ceramic,fragment)"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
               className="input-field"
             />
-            
+
             <div className="info-text">
               <small>
-                Tipo: {entityType} | ID: {entityId} | Sito: {sito}
+                Type: {entityType} | ID: {entityId} | Site: {sito}
                 {us && ` | US: ${us}`}
               </small>
             </div>
@@ -255,10 +255,10 @@ export default function PhotoCapture({
 
           <div className="action-buttons">
             <button onClick={discardImage} className="btn-discard">
-              🗑️ Scarta
+              🗑️ Discard
             </button>
             <button onClick={saveImage} className="btn-save">
-              💾 Salva
+              💾 Save
             </button>
           </div>
         </div>
