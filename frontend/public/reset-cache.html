@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Cache - PyArchInit</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            max-width: 500px;
+        }
+        h1 {
+            margin: 0 0 1rem 0;
+            font-size: 2rem;
+        }
+        .status {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            font-size: 1.1rem;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .btn {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 1rem 2rem;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            border: none;
+        }
+        .btn:hover {
+            background: #f0f0f0;
+        }
+        ul {
+            text-align: left;
+            display: inline-block;
+            margin: 1rem 0;
+        }
+        li {
+            margin: 0.5rem 0;
+        }
+        .success {
+            font-size: 4rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Cache Reset</h1>
+        <div id="status" class="status">Resetting cache...</div>
+        <div id="spinner" class="spinner"></div>
+        <div id="actions" style="display: none;">
+            <div class="success">✅</div>
+            <p><strong>Cache cleared successfully!</strong></p>
+            <ul>
+                <li>✓ Service Workers unregistered</li>
+                <li>✓ All caches deleted</li>
+                <li>✓ localStorage cleared</li>
+            </ul>
+            <a href="/" class="btn">Return to App</a>
+        </div>
+    </div>
+
+    <script>
+        async function resetCache() {
+            const statusEl = document.getElementById('status');
+            const spinnerEl = document.getElementById('spinner');
+            const actionsEl = document.getElementById('actions');
+
+            try {
+                // 1. Unregister all service workers
+                statusEl.textContent = 'Unregistering service workers...';
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (let registration of registrations) {
+                    await registration.unregister();
+                    console.log('Service worker unregistered:', registration);
+                }
+
+                // 2. Delete all caches
+                statusEl.textContent = 'Deleting all caches...';
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(
+                        cacheNames.map(name => caches.delete(name))
+                    );
+                    console.log('All caches deleted:', cacheNames);
+                }
+
+                // 3. Clear localStorage (preserving user settings if needed)
+                statusEl.textContent = 'Clearing storage...';
+                // Only clear PWA-related items, keep user settings
+                const itemsToKeep = ['sito', 'recordedBy', 'db_type', 'pg_config', 'sqlite_path'];
+                const preserved = {};
+                itemsToKeep.forEach(key => {
+                    const value = localStorage.getItem(key);
+                    if (value) preserved[key] = value;
+                });
+
+                localStorage.clear();
+
+                // Restore preserved items
+                Object.entries(preserved).forEach(([key, value]) => {
+                    localStorage.setItem(key, value);
+                });
+
+                // 4. Show success
+                statusEl.style.display = 'none';
+                spinnerEl.style.display = 'none';
+                actionsEl.style.display = 'block';
+
+            } catch (error) {
+                statusEl.textContent = '❌ Error: ' + error.message;
+                spinnerEl.style.display = 'none';
+                console.error('Reset error:', error);
+            }
+        }
+
+        // Start reset on page load
+        resetCache();
+    </script>
+</body>
+</html>

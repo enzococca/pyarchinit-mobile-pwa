@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PYARCHINIT_DB_HOST=${PYARCHINIT_DB_HOST:-db}
+      - PYARCHINIT_DB_PORT=${PYARCHINIT_DB_PORT:-5432}
+      - PYARCHINIT_DB_NAME=${PYARCHINIT_DB_NAME:-pyarchinit_db}
+      - PYARCHINIT_DB_USER=${PYARCHINIT_DB_USER:-postgres}
+      - PYARCHINIT_DB_PASSWORD=${PYARCHINIT_DB_PASSWORD:-postgres}
+      - PYARCHINIT_MEDIA_ROOT=/app/media
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+    volumes:
+      - ./backend:/app
+      - media_data:/app/media
+    depends_on:
+      - db
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Frontend PWA
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host
+
+  # PostgreSQL Database (opzionale - se non hai già PyArchInit DB)
+  db:
+    image: postgis/postgis:14-3.3
+    environment:
+      - POSTGRES_DB=pyarchinit_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/init_db.sql:/docker-entrypoint-initdb.d/init.sql
+
+  # Redis (per Celery queue)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # Celery worker (processing asincrono)
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - PYARCHINIT_DB_HOST=db
+      - REDIS_URL=redis://redis:6379/0
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - ./backend:/app
+      - media_data:/app/media
+    depends_on:
+      - db
+      - redis
+    command: celery -A tasks worker --loglevel=info
+
+volumes:
+  postgres_data:
+  media_data:
