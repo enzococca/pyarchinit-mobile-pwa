@@ -1,6 +1,6 @@
 {
-  "name": "PyArchInit Mobile PWA",
-  "short_name": "PyArchInit",
+  "name": "pyArchInit Mobile PWA",
+  "short_name": "pyArchInit",
   "description": "Offline-first mobile app for archaeological field documentation with AI-powered transcription",
   "start_url": "/",
   "display": "standalone",

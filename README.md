@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="frontend/public/logo.svg" alt="PyArchInit Mobile PWA Logo" width="200"/>
+  <img src="frontend/public/logo.svg" alt="pyArchInit Mobile PWA Logo" width="200"/>
 </p>
 
-# PyArchInit Mobile PWA
+# pyArchInit Mobile PWA
 
 > Offline-first Progressive Web Application for archaeological field documentation with AI-powered audio transcription and intelligent data extraction
 
@@ -14,7 +14,7 @@
 
 ## 📱 Overview
 
-PyArchInit Mobile PWA provides archaeologists with a modern mobile interface for field documentation, seamlessly integrating with the existing [PyArchInit](https://pypi.org/project/pyarchinit/) QGIS plugin ecosystem. Record voice notes, capture photos, and leverage AI to automatically structure your archaeological data - all while working offline in remote excavation sites.
+pyArchInit Mobile PWA provides archaeologists with a modern mobile interface for field documentation, seamlessly integrating with the existing [pyArchInit](https://pypi.org/project/pyarchinit/) QGIS plugin ecosystem. Record voice notes, capture photos, and leverage AI to automatically structure your archaeological data - all while working offline in remote excavation sites.
 
 ### Key Features
 
@@ -22,7 +22,7 @@ PyArchInit Mobile PWA provides archaeologists with a modern mobile interface for
 - Voice recording with pause/resume support
 - Automatic transcription using OpenAI Whisper
 - Intelligent archaeological data extraction with Claude AI
-- Structured field mapping to PyArchInit database schema
+- Structured field mapping to pyArchInit database schema
 - Multilanguage support (Italian, English, and more)
 - Validation and editing before database insertion
 
@@ -31,7 +31,7 @@ PyArchInit Mobile PWA provides archaeologists with a modern mobile interface for
 - Automatic image processing (thumbnail 150x150, resize 800x600, original)
 - EXIF metadata extraction (GPS, date, camera model)
 - Entity-based organization (US, Tomba, Material)
-- Direct integration with PyArchInit media_table
+- Direct integration with pyArchInit media_table
 
 **⚡ Offline-First Architecture**
 - Full functionality without internet connection
@@ -39,8 +39,8 @@ PyArchInit Mobile PWA provides archaeologists with a modern mobile interface for
 - Automatic background synchronization when online
 - Conflict resolution and retry logic
 
-**🔄 PyArchInit Integration**
-- Compatible with existing PyArchInit PostgreSQL database
+**🔄 pyArchInit Integration**
+- Compatible with existing pyArchInit PostgreSQL database
 - Supports stratigraphic units (US), tombs, material inventory
 - List-of-lists format for relationships and included materials
 - Duplicate detection with merge/overwrite options
