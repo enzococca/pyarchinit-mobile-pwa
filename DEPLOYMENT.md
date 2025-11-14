@@ -1,6 +1,10 @@
+<p align="center">
+  <img src="frontend/public/logo.svg" alt="pyArchInit Mobile PWA Logo" width="200"/>
+</p>
+
 # Production Deployment Guide
 
-This guide covers deploying PyArchInit Mobile PWA to production environments.
+This guide covers deploying pyArchInit Mobile PWA to production environments.
 
 ## Table of Contents
 

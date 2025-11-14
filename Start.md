@@ -1,10 +1,14 @@
+<p align="center">
+  <img src="frontend/public/logo.svg" alt="pyArchInit Mobile PWA Logo" width="200"/>
+</p>
+
 # Start.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
-PyArchInit Mobile PWA is an offline-first Progressive Web Application for archaeological field documentation. It integrates with the existing PyArchInit PostgreSQL database system, providing mobile-optimized audio and photo capture with AI-powered interpretation (Whisper for transcription, Claude for data extraction).
+pyArchInit Mobile PWA is an offline-first Progressive Web Application for archaeological field documentation. It integrates with the existing PyArchInit PostgreSQL database system, providing mobile-optimized audio and photo capture with AI-powered interpretation (Whisper for transcription, Claude for data extraction).
 
 ## Development Commands
 

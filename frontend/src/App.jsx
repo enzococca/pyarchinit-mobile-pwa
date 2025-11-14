@@ -203,7 +203,10 @@ export default function App() {
     <div className="app">
       {/* Header */}
       <header className="app-header">
-        <h1>🏺 PyArchInit Mobile</h1>
+        <div className="header-left">
+          <img src="/logo.svg" alt="pyArchInit Mobile PWA" className="app-logo" />
+          <h1>pyArchInit Mobile</h1>
+        </div>
         <div className="header-right">
           <button
             onClick={() => setShowDbSettings(true)}
@@ -641,8 +644,20 @@ export default function App() {
           box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
+        .header-left {
+          display: flex;
+          align-items: center;
+          gap: 0.8rem;
+        }
+
+        .app-logo {
+          height: 40px;
+          width: auto;
+        }
+
         .app-header h1 {
           font-size: 1.3rem;
+          margin: 0;
         }
 
         .header-right {
