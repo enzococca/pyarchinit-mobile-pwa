@@ -42,6 +42,9 @@ class ConfirmNoteRequest(BaseModel):
 # Initialize database (create tables if using SQLite)
 if settings.USE_SQLITE:
     init_db()
+    # Also initialize auth tables
+    from backend.init_auth_tables import init_auth_tables
+    init_auth_tables()
 
 app = FastAPI(
     title="PyArchInit Mobile API",
