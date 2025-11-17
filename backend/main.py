@@ -1,5 +1,6 @@
 import sys
 import os
+import json
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -484,7 +485,7 @@ async def process_note(note_id: int, db: Session = Depends(get_db)):
         note.transcription = result['transcription']['text']
         note.transcription_confidence = result['transcription']['confidence']
         note.detected_language = result['transcription'].get('language', 'it')
-        note.ai_interpretation = str(result['interpretation'])
+        note.ai_interpretation = json.dumps(result['interpretation'], ensure_ascii=False)
         note.ai_confidence = result['interpretation']['confidence']
         note.suggested_entity_type = result['interpretation']['entity_type']
         note.suggested_table = result['interpretation']['target_table']
