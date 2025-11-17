@@ -16,7 +16,13 @@ from config import settings
 def init_auth_tables():
     """Create auth tables in SQLite database"""
 
-    db_path = Path(settings.SQLITE_DB_PATH)
+    # Use same fallback logic as database.py
+    db_path_str = settings.SQLITE_DB_PATH
+    if not db_path_str:
+        # Default to backend/pyarchinit_db.sqlite if not set
+        db_path_str = os.path.join(os.path.dirname(__file__), "pyarchinit_db.sqlite")
+
+    db_path = Path(os.path.abspath(db_path_str))
     print(f"Initializing auth tables in: {db_path}")
 
     conn = sqlite3.connect(str(db_path))
