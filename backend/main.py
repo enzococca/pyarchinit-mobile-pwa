@@ -19,7 +19,7 @@ from backend.models.database import get_db, Media, MobileNote, US, Site, init_db
 from backend.services.image_processor import ImageProcessor, ImageValidator
 from backend.services.ai_processor import ArchaeologicalAIInterpreter
 from backend.services.stratigraphic_utils import parse_relationships, format_relationships_for_db
-from backend.routes import auth, media, database, notes, user_database
+from backend.routes import auth, media, database, notes
 
 
 # Pydantic models for API requests
@@ -66,7 +66,6 @@ app.include_router(auth.router)
 app.include_router(media.router)
 app.include_router(database.router)
 app.include_router(notes.router)
-app.include_router(user_database.router)
 
 # Inizializza servizi
 image_processor = ImageProcessor()

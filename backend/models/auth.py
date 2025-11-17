@@ -60,20 +60,7 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    # Database configuration for this user
-    db_mode = Column(String(50), default="sqlite")  # sqlite | postgres_personal | postgres_hybrid
-
-    # SQLite configuration
-    sqlite_filename = Column(String(255), nullable=True)  # Stored in /data/user_databases/{user_id}/
-
-    # PostgreSQL personal configuration (encrypted)
-    postgres_host = Column(String(255), nullable=True)
-    postgres_port = Column(Integer, nullable=True)
-    postgres_name = Column(String(255), nullable=True)
-    postgres_user = Column(String(255), nullable=True)
-    postgres_password_encrypted = Column(String(512), nullable=True)  # Encrypted with Fernet
-
-    # Relationships (hybrid mode only)
+    # Relationships
     owned_projects = relationship(
         "Project",
         back_populates="owner",
@@ -85,7 +72,7 @@ class User(Base):
     )
 
     def __repr__(self):
-        return f"<User(id={self.id}, email='{self.email}', name='{self.name}', db_mode='{self.db_mode}')>"
+        return f"<User(id={self.id}, email='{self.email}', name='{self.name}', role='{self.role}')>"
 
 
 class Project(Base):
