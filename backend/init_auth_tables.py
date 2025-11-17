@@ -16,12 +16,19 @@ from config import settings
 def init_auth_tables():
     """Create auth tables in SQLite database"""
 
-    # Use same fallback logic as database.py
-    db_path_str = settings.SQLITE_DB_PATH
-    if not db_path_str:
-        # Get absolute path of this script's directory, then construct db path
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        db_path_str = os.path.join(script_dir, "pyarchinit_db.sqlite")
+    # Get absolute path of this script's directory
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # Use SQLITE_DB_PATH if set, otherwise default to pyarchinit_db.sqlite in script dir
+    db_path_str = settings.SQLITE_DB_PATH if settings.SQLITE_DB_PATH else "pyarchinit_db.sqlite"
+
+    # Ensure path is absolute
+    if not os.path.isabs(db_path_str):
+        # If path starts with "backend/", strip it (it's from project root)
+        if db_path_str.startswith("backend/"):
+            db_path_str = db_path_str[len("backend/"):]
+        # Make relative path absolute relative to script directory
+        db_path_str = os.path.join(script_dir, db_path_str)
 
     db_path = Path(db_path_str)
     print(f"Initializing auth tables in: {db_path}")
