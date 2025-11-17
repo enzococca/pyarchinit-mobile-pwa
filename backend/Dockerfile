@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copia requirements e installa dipendenze Python
+# Updated: 2025-11-17 - Added cryptography dependency
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
