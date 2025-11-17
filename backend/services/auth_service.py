@@ -234,10 +234,13 @@ class AuthService:
             )
 
         # Create token
+        # Handle both Enum (PostgreSQL) and String (SQLite) for role
+        role_str = user.role.value if hasattr(user.role, 'value') else user.role
+
         token = AuthService.create_access_token(
             user_id=user.id,
             email=user.email,
-            role=user.role.value
+            role=role_str
         )
 
         return {
@@ -247,7 +250,7 @@ class AuthService:
                 "id": user.id,
                 "email": user.email,
                 "name": user.name,
-                "role": user.role.value
+                "role": role_str
             }
         }
 
