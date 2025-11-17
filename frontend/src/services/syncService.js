@@ -11,6 +11,19 @@ import {
 import { API_BASE } from '../config/api';
 
 /**
+ * Get authorization headers for API requests
+ */
+function getAuthHeaders() {
+  const token = localStorage.getItem('auth_token');
+  if (!token) {
+    throw new Error('No authentication token found. Please log in again.');
+  }
+  return {
+    'Authorization': `Bearer ${token}`
+  };
+}
+
+/**
  * Check internet connection
  */
 export function isOnline() {
@@ -86,6 +99,7 @@ async function syncAudioNote(queueItem) {
   // Upload
   const response = await axios.post(`${API_BASE}/notes/upload-audio`, formData, {
     headers: {
+      ...getAuthHeaders(),
       'Content-Type': 'multipart/form-data'
     }
   });
@@ -93,7 +107,9 @@ async function syncAudioNote(queueItem) {
   const serverNoteId = response.data.note_id;
 
   // Start processing
-  const processResponse = await axios.post(`${API_BASE}/notes/${serverNoteId}/process`);
+  const processResponse = await axios.post(`${API_BASE}/notes/${serverNoteId}/process`, {}, {
+    headers: getAuthHeaders()
+  });
 
   // Extract transcription and interpretation from processing
   const transcription = processResponse.data.transcription?.text;
@@ -168,6 +184,7 @@ async function syncImage(queueItem) {
   // Upload
   const response = await axios.post(`${API_BASE}/media/upload-image`, formData, {
     headers: {
+      ...getAuthHeaders(),
       'Content-Type': 'multipart/form-data'
     }
   });
@@ -225,7 +242,13 @@ export async function fetchWithOffline(url, options = {}) {
   }
 
   try {
-    const response = await axios(url, options);
+    // Merge auth headers with any provided headers
+    const headers = {
+      ...getAuthHeaders(),
+      ...(options.headers || {})
+    };
+
+    const response = await axios(url, { ...options, headers });
     return response.data;
   } catch (error) {
     if (error.code === 'ERR_NETWORK') {
@@ -277,7 +300,9 @@ export async function refreshProcessedNotes() {
 
   try {
     // Get notes list from server
-    const response = await axios.get(`${API_BASE}/notes`);
+    const response = await axios.get(`${API_BASE}/notes`, {
+      headers: getAuthHeaders()
+    });
 
     // Verify that serverNotes is a valid array
     const serverNotes = response.data?.notes || response.data || [];
