@@ -36,12 +36,11 @@ async def upload_sqlite(
         if not (file.filename.endswith('.sqlite') or file.filename.endswith('.db')):
             raise HTTPException(status_code=400, detail="File must be .sqlite or .db")
 
-        # Define target path
-        db_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            '..',
-            'pyarchinit_db.sqlite'
-        )
+        # Define target path - use same path as db_manager
+        if settings.SQLITE_DB_PATH:
+            db_path = settings.SQLITE_DB_PATH
+        else:
+            db_path = "/tmp/pyarchinit_db.sqlite"
 
         # Save uploaded file
         with open(db_path, 'wb') as buffer:
@@ -67,14 +66,14 @@ async def test_connection(
     """
     try:
         if config.mode == "sqlite":
-            # Test SQLite connection
-            db_path = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                '..',
-                'pyarchinit_db.sqlite'
-            )
+            # Test SQLite connection - use same path as db_manager
+            if settings.SQLITE_DB_PATH:
+                db_path = settings.SQLITE_DB_PATH
+            else:
+                db_path = "/tmp/pyarchinit_db.sqlite"
+
             if os.path.exists(db_path):
-                return {"message": "Connessione SQLite riuscita", "mode": "sqlite"}
+                return {"message": "Connessione SQLite riuscita", "mode": "sqlite", "path": db_path}
             else:
                 raise HTTPException(status_code=404, detail="Database SQLite non trovato")
 
@@ -122,18 +121,23 @@ async def download_sqlite(
     Download the current SQLite database file
     """
     try:
-        db_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            '..',
-            'pyarchinit_db.sqlite'
-        )
+        # Use same path as db_manager
+        if settings.SQLITE_DB_PATH:
+            db_path = settings.SQLITE_DB_PATH
+        else:
+            db_path = "/tmp/pyarchinit_db.sqlite"
 
         if not os.path.exists(db_path):
             raise HTTPException(status_code=404, detail="Database SQLite non trovato")
 
+        # Generate filename with timestamp for better organization
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        download_filename = f"pyarchinit_db_{timestamp}.sqlite"
+
         return FileResponse(
             path=db_path,
-            filename="pyarchinit_db.sqlite",
+            filename=download_filename,
             media_type="application/x-sqlite3"
         )
 
