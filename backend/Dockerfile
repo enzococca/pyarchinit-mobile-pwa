@@ -2,8 +2,8 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Force cache invalidation
-ARG CACHEBUST=1
+# Force cache invalidation - Change this value to force rebuild
+ARG CACHEBUST=2
 
 # Installa dipendenze sistema per image processing
 RUN apt-get update && apt-get install -y \
