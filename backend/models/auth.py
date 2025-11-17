@@ -12,6 +12,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime
 import enum
+import os
 
 from backend.models.database import Base
 
@@ -32,6 +33,12 @@ class ProjectRole(str, enum.Enum):
     VIEWER = "viewer"
 
 
+# Use String for SQLite compatibility, Enum for PostgreSQL
+USE_SQLITE = os.getenv("USE_SQLITE", "false").lower() == "true"
+RoleColumn = String(50) if USE_SQLITE else Enum(UserRole)
+ProjectRoleColumn = String(50) if USE_SQLITE else Enum(ProjectRole)
+
+
 class User(Base):
     """
     User accounts
@@ -46,7 +53,7 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     name = Column(String(255), nullable=False)
-    role = Column(Enum(UserRole), default=UserRole.ARCHAEOLOGIST)
+    role = Column(RoleColumn, default="archaeologist")  # Use string default for SQLite compatibility
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -104,7 +111,7 @@ class ProjectCollaborator(Base):
     id = Column(Integer, primary_key=True, index=True)
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    role = Column(Enum(ProjectRole), default=ProjectRole.CONTRIBUTOR)
+    role = Column(ProjectRoleColumn, default="contributor")  # Use string default for SQLite compatibility
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships

@@ -94,10 +94,13 @@ async def register(
     )
 
     # Generate token
+    # Handle both Enum (PostgreSQL) and String (SQLite) for role
+    role_str = user.role.value if hasattr(user.role, 'value') else user.role
+
     token = AuthService.create_access_token(
         user_id=user.id,
         email=user.email,
-        role=user.role.value
+        role=role_str
     )
 
     return {
@@ -107,7 +110,7 @@ async def register(
             "id": user.id,
             "email": user.email,
             "name": user.name,
-            "role": user.role.value
+            "role": role_str
         }
     }
 
@@ -141,11 +144,14 @@ async def get_current_user_info(
 
     Requires: Bearer token in Authorization header
     """
+    # Handle both Enum (PostgreSQL) and String (SQLite) for role
+    role_str = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+
     return {
         "id": current_user.id,
         "email": current_user.email,
         "name": current_user.name,
-        "role": current_user.role.value
+        "role": role_str
     }
 
 
