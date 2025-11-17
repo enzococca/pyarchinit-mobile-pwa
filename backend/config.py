@@ -5,7 +5,8 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     # Database Mode Selection
     # Options: "separate" | "hybrid" | "sqlite"
-    DB_MODE: str = os.getenv("DB_MODE", "hybrid")
+    # Default to SQLite for mobile-first offline capability
+    DB_MODE: str = os.getenv("DB_MODE", "sqlite")
 
     # Database PyArchInit
     USE_SQLITE: bool = os.getenv("USE_SQLITE", "false").lower() == "true"
