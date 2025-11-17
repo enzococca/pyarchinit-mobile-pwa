@@ -2,7 +2,10 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "DOCKERFILE",
-    "dockerfilePath": "backend/Dockerfile"
+    "dockerfilePath": "backend/Dockerfile",
+    "buildArgs": {
+      "CACHEBUST": "3-force-reinstall-2025-11-17"
+    }
   },
   "deploy": {
     "restartPolicyType": "ON_FAILURE",
