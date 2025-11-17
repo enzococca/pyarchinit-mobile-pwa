@@ -8,12 +8,13 @@ import os
 # Connection string PyArchInit
 if settings.USE_SQLITE:
     # Use the real PyArchInit database
-    # Allow override via environment variable, otherwise use default path
-    db_path = os.getenv("SQLITE_DB_PATH")
-    if not db_path:
-        db_path = os.path.join(os.path.dirname(__file__), "..", "pyarchinit_db.sqlite")
-    # Convert to absolute path for robustness
-    db_path = os.path.abspath(db_path)
+    # Always use a consistent absolute path in the backend directory
+    # This avoids issues with misconfigured SQLITE_DB_PATH environment variables
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    backend_dir = os.path.join(script_dir, "..")
+    db_path = os.path.join(backend_dir, "pyarchinit_db.sqlite")
+    # Normalize path to remove any ".." components
+    db_path = os.path.normpath(db_path)
     DATABASE_URL = f"sqlite:///{db_path}"
     print(f"[Database] Using SQLite database at: {db_path}")
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
