@@ -24,8 +24,8 @@ def init_auth_tables():
 
     # Ensure path is absolute
     if not os.path.isabs(db_path_str):
-        # If path starts with "backend/", strip it (it's from project root)
-        if db_path_str.startswith("backend/"):
+        # Strip all "backend/" prefixes (handles misconfigured paths)
+        while db_path_str.startswith("backend/"):
             db_path_str = db_path_str[len("backend/"):]
         # Make relative path absolute relative to script directory
         db_path_str = os.path.join(script_dir, db_path_str)
