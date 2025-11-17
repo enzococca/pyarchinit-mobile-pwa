@@ -190,7 +190,7 @@ class MediaProcessor:
             # Use raw SQL for compatibility with existing pyArchInit schema
             query = text("""
                 INSERT INTO media_table (
-                    mediatype, filename, filetype, filepath, descrizione
+                    media_type, filename, filetype, filepath, descrizione
                 )
                 VALUES (:mediatype, :filename, :filetype, :filepath, :description)
             """)
