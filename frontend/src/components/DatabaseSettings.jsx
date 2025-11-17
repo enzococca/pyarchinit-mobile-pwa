@@ -1,450 +1,526 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { Database, Server, HardDrive, Upload, Settings, Check, AlertCircle } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-
-function DatabaseSettings({ onClose }) {
-  const [dbType, setDbType] = useState('sqlite');
-  const [pgConfig, setPgConfig] = useState({
+export default function DatabaseSettings({ onClose }) {
+  const [dbMode, setDbMode] = useState('sqlite'); // 'sqlite' | 'separate' | 'hybrid'
+  const [currentMode, setCurrentMode] = useState(null);
+  const [sqliteFile, setSqliteFile] = useState(null);
+  const [postgresConfig, setPostgresConfig] = useState({
     host: 'localhost',
     port: '5432',
     database: 'pyarchinit_db',
     user: 'postgres',
     password: ''
   });
-  const [sqlitePath, setSqlitePath] = useState('/Users/enzo/Downloads/pyarchinit-mobile-pwa/backend/pyarchinit_db.sqlite');
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState(null);
-  const [saved, setSaved] = useState(false);
+  const [status, setStatus] = useState({ type: '', message: '' });
+  const [loading, setLoading] = useState(false);
 
-  // Load saved settings from localStorage
   useEffect(() => {
-    const savedDbType = localStorage.getItem('db_type');
-    const savedPgConfig = localStorage.getItem('pg_config');
-    const savedSqlitePath = localStorage.getItem('sqlite_path');
-
-    if (savedDbType) setDbType(savedDbType);
-    if (savedPgConfig) setPgConfig(JSON.parse(savedPgConfig));
-    if (savedSqlitePath) setSqlitePath(savedSqlitePath);
+    fetchCurrentMode();
   }, []);
 
-  const handlePgConfigChange = (field, value) => {
-    setPgConfig(prev => ({ ...prev, [field]: value }));
-  };
-
-  const testConnection = async () => {
-    setTesting(true);
-    setTestResult(null);
-    setSaved(false);
-
+  const fetchCurrentMode = async () => {
     try {
-      const config = dbType === 'sqlite'
-        ? { type: 'sqlite', path: sqlitePath }
-        : { type: 'postgresql', ...pgConfig };
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/db-mode`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
-      const response = await axios.post(`${API_BASE}/database/test-connection`, config);
-
-      if (response.data.success) {
-        setTestResult({ success: true, message: response.data.message, stats: response.data.stats });
-      } else {
-        setTestResult({ success: false, message: response.data.error });
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentMode(data.mode);
+        setDbMode(data.mode);
       }
     } catch (error) {
-      setTestResult({
-        success: false,
-        message: error.response?.data?.detail || error.message || 'Connection failed'
-      });
-    } finally {
-      setTesting(false);
+      console.error('Error fetching database mode:', error);
     }
   };
 
-  const saveSettings = () => {
-    // Save to localStorage
-    localStorage.setItem('db_type', dbType);
-    if (dbType === 'postgresql') {
-      localStorage.setItem('pg_config', JSON.stringify(pgConfig));
+  const handleSqliteFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file && (file.name.endsWith('.sqlite') || file.name.endsWith('.db'))) {
+      setSqliteFile(file);
+      setStatus({ type: 'info', message: `File selezionato: ${file.name}` });
     } else {
-      localStorage.setItem('sqlite_path', sqlitePath);
+      setStatus({ type: 'error', message: 'Seleziona un file .sqlite o .db valido' });
+    }
+  };
+
+  const handleUploadSqlite = async () => {
+    if (!sqliteFile) {
+      setStatus({ type: 'error', message: 'Seleziona prima un file SQLite' });
+      return;
     }
 
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setLoading(true);
+    setStatus({ type: 'info', message: 'Caricamento in corso...' });
 
-    // In a real implementation, you would also send this to the backend
-    // to update the .env or config file
+    try {
+      const formData = new FormData();
+      formData.append('file', sqliteFile);
+
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/database/upload-sqlite`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+
+      if (response.ok) {
+        setStatus({ type: 'success', message: 'Database SQLite caricato con successo!' });
+        fetchCurrentMode();
+      } else {
+        const error = await response.json();
+        setStatus({ type: 'error', message: `Errore: ${error.detail}` });
+      }
+    } catch (error) {
+      setStatus({ type: 'error', message: `Errore di caricamento: ${error.message}` });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    setLoading(true);
+    setStatus({ type: 'info', message: 'Test connessione in corso...' });
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/database/test-connection`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          mode: dbMode,
+          config: postgresConfig
+        })
+      });
+
+      if (response.ok) {
+        setStatus({ type: 'success', message: 'Connessione riuscita!' });
+      } else {
+        const error = await response.json();
+        setStatus({ type: 'error', message: `Errore di connessione: ${error.detail}` });
+      }
+    } catch (error) {
+      setStatus({ type: 'error', message: `Errore: ${error.message}` });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveConfiguration = async () => {
+    setLoading(true);
+    setStatus({ type: 'info', message: 'Salvataggio configurazione...' });
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/database/configure`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          mode: dbMode,
+          config: dbMode !== 'sqlite' ? postgresConfig : null
+        })
+      });
+
+      if (response.ok) {
+        setStatus({ type: 'success', message: 'Configurazione salvata! Riavviare l\'applicazione.' });
+        setCurrentMode(dbMode);
+      } else {
+        const error = await response.json();
+        setStatus({ type: 'error', message: `Errore: ${error.detail}` });
+      }
+    } catch (error) {
+      setStatus({ type: 'error', message: `Errore: ${error.message}` });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="database-settings-overlay">
-      <div className="database-settings-modal">
-        <div className="modal-header">
-          <h2>⚙️ Database Configuration</h2>
-          <button onClick={onClose} className="close-btn">✕</button>
-        </div>
-
-        <div className="modal-body">
-          {/* Database Type Selector */}
-          <div className="form-group">
-            <label>Database Type:</label>
-            <div className="radio-group">
-              <label className="radio-label">
-                <input
-                  type="radio"
-                  name="dbType"
-                  value="sqlite"
-                  checked={dbType === 'sqlite'}
-                  onChange={(e) => setDbType(e.target.value)}
-                />
-                <span>SQLite (Local File)</span>
-              </label>
-              <label className="radio-label">
-                <input
-                  type="radio"
-                  name="dbType"
-                  value="postgresql"
-                  checked={dbType === 'postgresql'}
-                  onChange={(e) => setDbType(e.target.value)}
-                />
-                <span>PostgreSQL (Server)</span>
-              </label>
-            </div>
-          </div>
-
-          {/* SQLite Configuration */}
-          {dbType === 'sqlite' && (
-            <div className="config-section">
-              <h3>SQLite Configuration</h3>
-              <div className="form-group">
-                <label>Database File Path:</label>
-                <input
-                  type="text"
-                  value={sqlitePath}
-                  onChange={(e) => setSqlitePath(e.target.value)}
-                  placeholder="/Users/enzo/Downloads/pyarchinit-mobile-pwa/backend/pyarchinit_db.sqlite"
-                />
-                <small>Absolute path to SQLite database file on server</small>
-              </div>
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 1000,
+      overflowY: 'auto',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      padding: '20px'
+    }}>
+      <div style={{
+        maxWidth: '900px',
+        margin: '0 auto',
+        background: 'white',
+        borderRadius: '20px',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+        padding: '30px'
+      }}>
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: '30px', position: 'relative' }}>
+          {onClose && (
+            <button
+              onClick={onClose}
+              style={{
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                background: 'white',
+                border: 'none',
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                fontSize: '24px',
+                color: '#667eea',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              }}
+            >
+              ✕
+            </button>
+          )}
+          <Settings size={48} style={{ color: '#667eea', marginBottom: '10px' }} />
+          <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: '#1a202c', marginBottom: '8px' }}>
+            Impostazioni Database
+          </h1>
+          <p style={{ color: '#718096' }}>
+            Configura il tipo di database e la connessione
+          </p>
+          {currentMode && (
+            <div style={{
+              display: 'inline-block',
+              padding: '8px 16px',
+              background: '#edf2f7',
+              borderRadius: '20px',
+              marginTop: '12px',
+              fontSize: '14px',
+              color: '#4a5568'
+            }}>
+              Modalità attuale: <strong>{currentMode}</strong>
             </div>
           )}
+        </div>
 
-          {/* PostgreSQL Configuration */}
-          {dbType === 'postgresql' && (
-            <div className="config-section">
-              <h3>PostgreSQL Configuration</h3>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Host:</label>
-                  <input
-                    type="text"
-                    value={pgConfig.host}
-                    onChange={(e) => handlePgConfigChange('host', e.target.value)}
-                    placeholder="localhost"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Port:</label>
-                  <input
-                    type="text"
-                    value={pgConfig.port}
-                    onChange={(e) => handlePgConfigChange('port', e.target.value)}
-                    placeholder="5432"
-                  />
-                </div>
-              </div>
+        {/* Status Messages */}
+        {status.message && (
+          <div style={{
+            padding: '16px',
+            borderRadius: '12px',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            background: status.type === 'success' ? '#d4edda' :
+                       status.type === 'error' ? '#f8d7da' : '#d1ecf1',
+            color: status.type === 'success' ? '#155724' :
+                   status.type === 'error' ? '#721c24' : '#0c5460',
+            border: `1px solid ${status.type === 'success' ? '#c3e6cb' :
+                                  status.type === 'error' ? '#f5c6cb' : '#bee5eb'}`
+          }}>
+            {status.type === 'success' ? <Check size={20} /> : <AlertCircle size={20} />}
+            {status.message}
+          </div>
+        )}
 
-              <div className="form-group">
-                <label>Database Name:</label>
+        {/* Database Mode Selection */}
+        <div style={{ marginBottom: '30px' }}>
+          <label style={{ display: 'block', fontWeight: '600', marginBottom: '12px', color: '#2d3748' }}>
+            Seleziona Modalità Database
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+            {/* SQLite */}
+            <button
+              onClick={() => setDbMode('sqlite')}
+              disabled={loading}
+              style={{
+                padding: '20px',
+                borderRadius: '12px',
+                border: dbMode === 'sqlite' ? '3px solid #667eea' : '2px solid #e2e8f0',
+                background: dbMode === 'sqlite' ? '#edf2ff' : 'white',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s',
+                opacity: loading ? 0.6 : 1
+              }}
+            >
+              <HardDrive size={32} style={{
+                color: dbMode === 'sqlite' ? '#667eea' : '#718096',
+                margin: '0 auto 8px'
+              }} />
+              <div style={{ fontWeight: '600', color: '#2d3748', marginBottom: '4px' }}>SQLite</div>
+              <div style={{ fontSize: '12px', color: '#718096' }}>Database locale</div>
+            </button>
+
+            {/* PostgreSQL Separate */}
+            <button
+              onClick={() => setDbMode('separate')}
+              disabled={loading}
+              style={{
+                padding: '20px',
+                borderRadius: '12px',
+                border: dbMode === 'separate' ? '3px solid #667eea' : '2px solid #e2e8f0',
+                background: dbMode === 'separate' ? '#edf2ff' : 'white',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s',
+                opacity: loading ? 0.6 : 1
+              }}
+            >
+              <Database size={32} style={{
+                color: dbMode === 'separate' ? '#667eea' : '#718096',
+                margin: '0 auto 8px'
+              }} />
+              <div style={{ fontWeight: '600', color: '#2d3748', marginBottom: '4px' }}>PostgreSQL</div>
+              <div style={{ fontSize: '12px', color: '#718096' }}>DB separato</div>
+            </button>
+
+            {/* PostgreSQL Hybrid */}
+            <button
+              onClick={() => setDbMode('hybrid')}
+              disabled={loading}
+              style={{
+                padding: '20px',
+                borderRadius: '12px',
+                border: dbMode === 'hybrid' ? '3px solid #667eea' : '2px solid #e2e8f0',
+                background: dbMode === 'hybrid' ? '#edf2ff' : 'white',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s',
+                opacity: loading ? 0.6 : 1
+              }}
+            >
+              <Server size={32} style={{
+                color: dbMode === 'hybrid' ? '#667eea' : '#718096',
+                margin: '0 auto 8px'
+              }} />
+              <div style={{ fontWeight: '600', color: '#2d3748', marginBottom: '4px' }}>PostgreSQL</div>
+              <div style={{ fontSize: '12px', color: '#718096' }}>Ibrido (RLS)</div>
+            </button>
+          </div>
+        </div>
+
+        {/* SQLite File Upload */}
+        {dbMode === 'sqlite' && (
+          <div style={{
+            padding: '24px',
+            background: '#f7fafc',
+            borderRadius: '12px',
+            marginBottom: '24px'
+          }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#2d3748' }}>
+              Carica Database SQLite
+            </h3>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <label style={{
+                flex: 1,
+                padding: '12px 20px',
+                background: 'white',
+                border: '2px dashed #cbd5e0',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                textAlign: 'center',
+                color: '#4a5568',
+                transition: 'all 0.2s'
+              }}>
+                <Upload size={20} style={{ display: 'inline-block', marginRight: '8px', verticalAlign: 'middle' }} />
+                {sqliteFile ? sqliteFile.name : 'Seleziona file .sqlite/.db'}
+                <input
+                  type="file"
+                  accept=".sqlite,.db"
+                  onChange={handleSqliteFileChange}
+                  style={{ display: 'none' }}
+                  disabled={loading}
+                />
+              </label>
+              <button
+                onClick={handleUploadSqlite}
+                disabled={!sqliteFile || loading}
+                style={{
+                  padding: '12px 24px',
+                  background: sqliteFile && !loading ? '#667eea' : '#cbd5e0',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  cursor: sqliteFile && !loading ? 'pointer' : 'not-allowed',
+                  transition: 'all 0.2s'
+                }}
+              >
+                Carica
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* PostgreSQL Configuration */}
+        {(dbMode === 'separate' || dbMode === 'hybrid') && (
+          <div style={{
+            padding: '24px',
+            background: '#f7fafc',
+            borderRadius: '12px',
+            marginBottom: '24px'
+          }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#2d3748' }}>
+              Configurazione PostgreSQL
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', color: '#4a5568' }}>
+                  Host
+                </label>
                 <input
                   type="text"
-                  value={pgConfig.database}
-                  onChange={(e) => handlePgConfigChange('database', e.target.value)}
-                  placeholder="pyarchinit_db"
+                  value={postgresConfig.host}
+                  onChange={(e) => setPostgresConfig({ ...postgresConfig, host: e.target.value })}
+                  disabled={loading}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '14px'
+                  }}
                 />
               </div>
-
-              <div className="form-group">
-                <label>User:</label>
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', color: '#4a5568' }}>
+                  Porta
+                </label>
                 <input
                   type="text"
-                  value={pgConfig.user}
-                  onChange={(e) => handlePgConfigChange('user', e.target.value)}
-                  placeholder="postgres"
+                  value={postgresConfig.port}
+                  onChange={(e) => setPostgresConfig({ ...postgresConfig, port: e.target.value })}
+                  disabled={loading}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '14px'
+                  }}
                 />
               </div>
-
-              <div className="form-group">
-                <label>Password:</label>
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', color: '#4a5568' }}>
+                  Database
+                </label>
+                <input
+                  type="text"
+                  value={postgresConfig.database}
+                  onChange={(e) => setPostgresConfig({ ...postgresConfig, database: e.target.value })}
+                  disabled={loading}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', color: '#4a5568' }}>
+                  Utente
+                </label>
+                <input
+                  type="text"
+                  value={postgresConfig.user}
+                  onChange={(e) => setPostgresConfig({ ...postgresConfig, user: e.target.value })}
+                  disabled={loading}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '6px', color: '#4a5568' }}>
+                  Password
+                </label>
                 <input
                   type="password"
-                  value={pgConfig.password}
-                  onChange={(e) => handlePgConfigChange('password', e.target.value)}
-                  placeholder="••••••••"
+                  value={postgresConfig.password}
+                  onChange={(e) => setPostgresConfig({ ...postgresConfig, password: e.target.value })}
+                  disabled={loading}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '14px'
+                  }}
                 />
               </div>
             </div>
-          )}
-
-          {/* Test Result */}
-          {testResult && (
-            <div className={`test-result ${testResult.success ? 'success' : 'error'}`}>
-              <strong>{testResult.success ? '✓ Connection Successful' : '✗ Connection Failed'}</strong>
-              <p>{testResult.message}</p>
-              {testResult.stats && (
-                <div className="db-stats">
-                  <p>📊 Database Statistics:</p>
-                  <ul>
-                    <li>Sites: {testResult.stats.sites}</li>
-                    <li>US Records: {testResult.stats.us_records}</li>
-                    <li>Tables: {testResult.stats.tables}</li>
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="button-group">
             <button
-              onClick={testConnection}
-              disabled={testing}
-              className="btn btn-test"
+              onClick={handleTestConnection}
+              disabled={loading}
+              style={{
+                marginTop: '16px',
+                padding: '10px 20px',
+                background: 'white',
+                color: '#667eea',
+                border: '2px solid #667eea',
+                borderRadius: '8px',
+                fontWeight: '600',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.6 : 1
+              }}
             >
-              {testing ? '🔄 Testing...' : '🔌 Test Connection'}
-            </button>
-            <button
-              onClick={saveSettings}
-              className="btn btn-save"
-              disabled={!testResult?.success}
-            >
-              💾 Save Settings
+              Testa Connessione
             </button>
           </div>
+        )}
 
-          {saved && <div className="save-notification">✓ Settings saved successfully!</div>}
+        {/* Mode Description */}
+        <div style={{
+          padding: '20px',
+          background: '#edf2ff',
+          borderRadius: '12px',
+          marginBottom: '24px',
+          fontSize: '14px',
+          color: '#4a5568',
+          lineHeight: '1.6'
+        }}>
+          <strong>Modalità selezionata: {dbMode === 'sqlite' ? 'SQLite' : dbMode === 'separate' ? 'PostgreSQL Separato' : 'PostgreSQL Ibrido'}</strong>
+          <p style={{ marginTop: '8px', marginBottom: 0 }}>
+            {dbMode === 'sqlite' && 'Database locale sul dispositivo. Ideale per uso offline singolo.'}
+            {dbMode === 'separate' && 'Ogni utente ha il proprio database PostgreSQL separato. Isolamento completo dei dati.'}
+            {dbMode === 'hybrid' && 'Database condiviso con Row-Level Security. Consente collaborazione tra utenti su progetti.'}
+          </p>
         </div>
+
+        {/* Save Button */}
+        <button
+          onClick={handleSaveConfiguration}
+          disabled={loading}
+          style={{
+            width: '100%',
+            padding: '16px',
+            background: loading ? '#cbd5e0' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '12px',
+            fontSize: '16px',
+            fontWeight: '600',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            transition: 'all 0.3s',
+            boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
+          }}
+        >
+          {loading ? 'Elaborazione...' : 'Salva Configurazione'}
+        </button>
       </div>
-
-      <style>{`
-        .database-settings-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.7);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-          padding: 20px;
-        }
-
-        .database-settings-modal {
-          background: white;
-          border-radius: 12px;
-          width: 100%;
-          max-width: 600px;
-          max-height: 90vh;
-          overflow-y: auto;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        }
-
-        .modal-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 20px;
-          border-bottom: 1px solid #e0e0e0;
-        }
-
-        .modal-header h2 {
-          margin: 0;
-          font-size: 1.5rem;
-          color: #333;
-        }
-
-        .close-btn {
-          background: none;
-          border: none;
-          font-size: 1.5rem;
-          cursor: pointer;
-          color: #666;
-          padding: 5px 10px;
-          line-height: 1;
-        }
-
-        .close-btn:hover {
-          color: #333;
-        }
-
-        .modal-body {
-          padding: 20px;
-        }
-
-        .form-group {
-          margin-bottom: 20px;
-        }
-
-        .form-group label {
-          display: block;
-          margin-bottom: 8px;
-          font-weight: 600;
-          color: #333;
-        }
-
-        .form-group input[type="text"],
-        .form-group input[type="password"] {
-          width: 100%;
-          padding: 10px;
-          border: 1px solid #ddd;
-          border-radius: 6px;
-          font-size: 14px;
-        }
-
-        .form-group input:focus {
-          outline: none;
-          border-color: #4CAF50;
-        }
-
-        .form-group small {
-          display: block;
-          margin-top: 5px;
-          color: #666;
-          font-size: 12px;
-        }
-
-        .radio-group {
-          display: flex;
-          gap: 20px;
-        }
-
-        .radio-label {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          cursor: pointer;
-          font-weight: normal;
-        }
-
-        .radio-label input[type="radio"] {
-          cursor: pointer;
-        }
-
-        .config-section {
-          padding: 20px;
-          background: #f5f5f5;
-          border-radius: 8px;
-          margin-top: 20px;
-        }
-
-        .config-section h3 {
-          margin: 0 0 15px 0;
-          font-size: 1.1rem;
-          color: #333;
-        }
-
-        .form-row {
-          display: grid;
-          grid-template-columns: 2fr 1fr;
-          gap: 15px;
-        }
-
-        .test-result {
-          margin-top: 20px;
-          padding: 15px;
-          border-radius: 8px;
-          border-left: 4px solid;
-        }
-
-        .test-result.success {
-          background: #e8f5e9;
-          border-color: #4CAF50;
-          color: #2e7d32;
-        }
-
-        .test-result.error {
-          background: #ffebee;
-          border-color: #f44336;
-          color: #c62828;
-        }
-
-        .test-result strong {
-          display: block;
-          margin-bottom: 5px;
-        }
-
-        .test-result p {
-          margin: 5px 0;
-        }
-
-        .db-stats {
-          margin-top: 10px;
-          padding-top: 10px;
-          border-top: 1px solid rgba(0, 0, 0, 0.1);
-        }
-
-        .db-stats ul {
-          margin: 5px 0;
-          padding-left: 20px;
-        }
-
-        .db-stats li {
-          margin: 3px 0;
-        }
-
-        .button-group {
-          display: flex;
-          gap: 10px;
-          margin-top: 20px;
-        }
-
-        .btn {
-          flex: 1;
-          padding: 12px 20px;
-          border: none;
-          border-radius: 6px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: background 0.2s;
-        }
-
-        .btn-test {
-          background: #2196F3;
-          color: white;
-        }
-
-        .btn-test:hover:not(:disabled) {
-          background: #1976D2;
-        }
-
-        .btn-save {
-          background: #4CAF50;
-          color: white;
-        }
-
-        .btn-save:hover:not(:disabled) {
-          background: #388E3C;
-        }
-
-        .btn:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        .save-notification {
-          margin-top: 10px;
-          padding: 10px;
-          background: #e8f5e9;
-          color: #2e7d32;
-          border-radius: 6px;
-          text-align: center;
-          font-weight: 600;
-        }
-      `}</style>
     </div>
   );
 }
-
-export default DatabaseSettings;

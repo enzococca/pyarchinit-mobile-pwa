@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import AudioRecorder from './components/AudioRecorder';
 import PhotoCapture from './components/PhotoCapture';
+import MediaCapture from './components/MediaCapture';
 import DatabaseSettings from './components/DatabaseSettings';
 import NotePreview from './components/NotePreview';
+import Login from './components/Login';
+import Register from './components/Register';
 import {
   initDB,
   getAllAudioNotes,
@@ -20,7 +23,12 @@ import {
 } from './services/syncService';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState('home'); // 'home', 'audio', 'photo', 'notes', 'sync'
+  // Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authView, setAuthView] = useState('login'); // 'login' | 'register'
+  const [currentUser, setCurrentUser] = useState(null);
+
+  const [currentView, setCurrentView] = useState('home'); // 'home', 'audio', 'photo', 'notes', 'sync', 'media'
   const [sito, setSito] = useState('');
   const [recordedBy, setRecordedBy] = useState('');
   const [entityType, setEntityType] = useState('US');
@@ -39,9 +47,20 @@ export default function App() {
   const [selectedNotes, setSelectedNotes] = useState([]);
 
   useEffect(() => {
+    // Check authentication status
+    const token = localStorage.getItem('auth_token');
+    const userName = localStorage.getItem('user_name');
+    const userEmail = localStorage.getItem('user_email');
+
+    if (token) {
+      setIsAuthenticated(true);
+      setCurrentUser({ name: userName, email: userEmail });
+      setRecordedBy(userName || '');
+    }
+
     // Init DB
     initDB();
-    
+
     // Load saved settings
     loadSettings();
 
@@ -57,12 +76,34 @@ export default function App() {
 
     // Load initial data
     refreshData();
-    
+
     return () => {
       window.removeEventListener('online', () => setOnline(true));
       window.removeEventListener('offline', () => setOnline(false));
     };
   }, []);
+
+  const handleLoginSuccess = (data) => {
+    setIsAuthenticated(true);
+    setCurrentUser(data.user);
+    setRecordedBy(data.user.name);
+  };
+
+  const handleRegisterSuccess = (data) => {
+    setIsAuthenticated(true);
+    setCurrentUser(data.user);
+    setRecordedBy(data.user.name);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_name');
+    localStorage.removeItem('user_email');
+    localStorage.removeItem('user_role');
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    setCurrentView('home');
+  };
 
   const loadSettings = async () => {
     const savedSito = await getSetting('sito');
@@ -199,13 +240,40 @@ export default function App() {
     return true;
   });
 
+  // Authentication enabled - users must login/register
+  // Show authentication screens if not logged in
+  const ENABLE_AUTH = true; // Set to false to disable authentication
+
+  if (ENABLE_AUTH && !isAuthenticated) {
+    if (authView === 'login') {
+      return (
+        <Login
+          onLoginSuccess={handleLoginSuccess}
+          onSwitchToRegister={() => setAuthView('register')}
+        />
+      );
+    } else {
+      return (
+        <Register
+          onRegisterSuccess={handleRegisterSuccess}
+          onSwitchToLogin={() => setAuthView('login')}
+        />
+      );
+    }
+  }
+
   return (
     <div className="app">
       {/* Header */}
       <header className="app-header">
         <div className="header-left">
           <img src="/logo.svg" alt="pyArchInit Mobile PWA" className="app-logo" />
-          <h1>pyArchInit Mobile</h1>
+          <div>
+            <h1>pyArchInit Mobile</h1>
+            {currentUser && (
+              <p className="user-info">👤 {currentUser.name}</p>
+            )}
+          </div>
         </div>
         <div className="header-right">
           <button
@@ -214,6 +282,13 @@ export default function App() {
             title="Database Settings"
           >
             ⚙️
+          </button>
+          <button
+            onClick={handleLogout}
+            className="btn-logout"
+            title="Logout"
+          >
+            🚪
           </button>
           <div className="status">
             <span className={online ? 'online' : 'offline'}>
@@ -286,15 +361,13 @@ export default function App() {
               🎤 Audio Note
             </button>
 
-            {/* Photo functionality temporarily disabled
             <button
-              onClick={() => setCurrentView('photo')}
-              className="btn-action btn-photo"
+              onClick={() => setCurrentView('media')}
+              className="btn-action btn-media"
               disabled={!sito}
             >
-              📷 Take Photo
+              📸 Media Capture
             </button>
-            */}
           </div>
 
           <div className="secondary-actions">
@@ -334,62 +407,14 @@ export default function App() {
         </div>
       )}
 
-      {/* Photo Capture */}
-      {currentView === 'photo' && (
-        <div className="view-panel">
+      {/* Media Capture */}
+      {currentView === 'media' && (
+        <div className="view-panel media-capture-view">
           <button onClick={() => setCurrentView('home')} className="btn-back">
             ← Back
           </button>
 
-          <h2>📷 Take Photo</h2>
-
-          <div className="photo-settings">
-            <div className="form-group">
-              <label>Entity Type</label>
-              <select value={entityType} onChange={(e) => setEntityType(e.target.value)}>
-                <option value="US">US - Stratigraphic Unit</option>
-                <option value="TOMBA">Tomb</option>
-                <option value="MATERIALE">Material</option>
-                <option value="STRUTTURA">Structure</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Entity ID</label>
-              <input
-                type="number"
-                value={entityId}
-                onChange={(e) => setEntityId(e.target.value)}
-                placeholder={entityType === 'US' ? 'US Number' : 'ID'}
-              />
-            </div>
-
-            {entityType === 'MATERIALE' && (
-              <div className="form-group">
-                <label>Discovery US</label>
-                <input
-                  type="number"
-                  value={us}
-                  onChange={(e) => setUs(e.target.value)}
-                  placeholder="US Number"
-                />
-              </div>
-            )}
-          </div>
-
-          {entityId && (
-            <PhotoCapture
-              entityType={entityType}
-              entityId={parseInt(entityId)}
-              sito={sito}
-              us={us ? parseInt(us) : null}
-              photographer={recordedBy}
-              onPhotoCapture={(id) => {
-                refreshData();
-                setCurrentView('home');
-              }}
-            />
-          )}
+          <MediaCapture />
         </div>
       )}
 
@@ -666,7 +691,14 @@ export default function App() {
           align-items: center;
         }
 
-        .btn-settings {
+        .user-info {
+          margin: 0;
+          font-size: 0.8rem;
+          opacity: 0.9;
+        }
+
+        .btn-settings,
+        .btn-logout {
           background: rgba(255,255,255,0.2);
           border: none;
           color: white;
@@ -681,8 +713,17 @@ export default function App() {
           justify-content: center;
         }
 
-        .btn-settings:hover {
+        .btn-settings:hover,
+        .btn-logout:hover {
           background: rgba(255,255,255,0.3);
+        }
+
+        .btn-logout {
+          background: rgba(255,100,100,0.3);
+        }
+
+        .btn-logout:hover {
+          background: rgba(255,100,100,0.5);
         }
 
         .status {
@@ -825,6 +866,10 @@ export default function App() {
           background: #ff9800;
         }
 
+        .btn-media {
+          background: #9c27b0;
+        }
+
         .btn-photo {
           background: #2196f3;
         }
@@ -832,6 +877,10 @@ export default function App() {
         .btn-action:disabled {
           opacity: 0.5;
           cursor: not-allowed;
+        }
+
+        .media-capture-view {
+          padding: 0 !important;
         }
 
         .secondary-actions {

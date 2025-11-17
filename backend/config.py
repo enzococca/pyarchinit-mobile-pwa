@@ -3,6 +3,10 @@ from pathlib import Path
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
+    # Database Mode Selection
+    # Options: "separate" | "hybrid" | "sqlite"
+    DB_MODE: str = os.getenv("DB_MODE", "hybrid")
+
     # Database PyArchInit
     USE_SQLITE: bool = os.getenv("USE_SQLITE", "false").lower() == "true"
     SQLITE_DB_PATH: str = os.getenv("SQLITE_DB_PATH", "")  # Optional: override default SQLite path
@@ -11,6 +15,9 @@ class Settings(BaseSettings):
     PYARCHINIT_DB_NAME: str = os.getenv("PYARCHINIT_DB_NAME", "pyarchinit_db")
     PYARCHINIT_DB_USER: str = os.getenv("PYARCHINIT_DB_USER", "postgres")
     PYARCHINIT_DB_PASSWORD: str = os.getenv("PYARCHINIT_DB_PASSWORD", "")
+
+    # Separate Mode Configuration
+    SEPARATE_DB_NAME_TEMPLATE: str = os.getenv("SEPARATE_DB_NAME_TEMPLATE", "pyarchinit_user")
     
     # Percorsi PyArchInit Media
     PYARCHINIT_MEDIA_ROOT: Path = Path(os.getenv("PYARCHINIT_MEDIA_ROOT", "/tmp/pyarchinit_media"))
