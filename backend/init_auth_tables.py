@@ -124,6 +124,56 @@ def init_auth_tables():
         if "duplicate column name" not in str(e).lower():
             print(f"Note: {e}")
 
+    # Add user database configuration columns
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN db_mode VARCHAR(50) DEFAULT 'sqlite'")
+        print("Added db_mode to users")
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" not in str(e).lower():
+            print(f"Note: {e}")
+
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN sqlite_filename VARCHAR(255)")
+        print("Added sqlite_filename to users")
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" not in str(e).lower():
+            print(f"Note: {e}")
+
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN postgres_host VARCHAR(255)")
+        print("Added postgres_host to users")
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" not in str(e).lower():
+            print(f"Note: {e}")
+
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN postgres_port INTEGER")
+        print("Added postgres_port to users")
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" not in str(e).lower():
+            print(f"Note: {e}")
+
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN postgres_name VARCHAR(255)")
+        print("Added postgres_name to users")
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" not in str(e).lower():
+            print(f"Note: {e}")
+
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN postgres_user VARCHAR(255)")
+        print("Added postgres_user to users")
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" not in str(e).lower():
+            print(f"Note: {e}")
+
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN postgres_password_encrypted VARCHAR(512)")
+        print("Added postgres_password_encrypted to users")
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" not in str(e).lower():
+            print(f"Note: {e}")
+
     conn.commit()
     conn.close()
 

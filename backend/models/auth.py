@@ -41,10 +41,12 @@ ProjectRoleColumn = String(50) if USE_SQLITE else Enum(ProjectRole)
 
 class User(Base):
     """
-    User accounts
+    User accounts with personal database configurations
 
-    In separate mode: Each user gets their own database
-    In hybrid mode: All users share database with RLS
+    Each user can choose their database mode:
+    - sqlite: Personal SQLite database (upload/download)
+    - postgres_personal: Personal PostgreSQL connection
+    - postgres_hybrid: Shared PostgreSQL with RLS (multi-user projects)
     """
     __tablename__ = "users"
     __table_args__ = {'extend_existing': True}
@@ -58,6 +60,19 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    # Database configuration for this user
+    db_mode = Column(String(50), default="sqlite")  # sqlite | postgres_personal | postgres_hybrid
+
+    # SQLite configuration
+    sqlite_filename = Column(String(255), nullable=True)  # Stored in /data/user_databases/{user_id}/
+
+    # PostgreSQL personal configuration (encrypted)
+    postgres_host = Column(String(255), nullable=True)
+    postgres_port = Column(Integer, nullable=True)
+    postgres_name = Column(String(255), nullable=True)
+    postgres_user = Column(String(255), nullable=True)
+    postgres_password_encrypted = Column(String(512), nullable=True)  # Encrypted with Fernet
+
     # Relationships (hybrid mode only)
     owned_projects = relationship(
         "Project",
@@ -70,7 +85,7 @@ class User(Base):
     )
 
     def __repr__(self):
-        return f"<User(id={self.id}, email='{self.email}', name='{self.name}')>"
+        return f"<User(id={self.id}, email='{self.email}', name='{self.name}', db_mode='{self.db_mode}')>"
 
 
 class Project(Base):
