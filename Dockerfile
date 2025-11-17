@@ -17,8 +17,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy backend code
 COPY backend/ ./backend/
 
-# Set working directory to backend
-WORKDIR /app/backend
-
-# Initialize auth tables and start server
-CMD python init_auth_tables.py && uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
+# Initialize auth tables and start server (stay in /app, not /app/backend)
+CMD cd backend && python init_auth_tables.py && uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
