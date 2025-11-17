@@ -20,6 +20,8 @@ from backend.models.database import get_db, Media, MobileNote, US, Site, init_db
 from backend.services.image_processor import ImageProcessor, ImageValidator
 from backend.services.ai_processor import ArchaeologicalAIInterpreter
 from backend.services.stratigraphic_utils import parse_relationships, format_relationships_for_db
+from backend.services.auth_service import get_current_user
+from backend.models.auth import User
 from backend.routes import auth, media, database, notes
 
 
@@ -610,6 +612,7 @@ async def validate_note(
 async def confirm_note(
     note_id: int,
     request: ConfirmNoteRequest,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
