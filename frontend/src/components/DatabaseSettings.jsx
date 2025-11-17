@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Database, Server, HardDrive, Upload, Settings, Check, AlertCircle } from 'lucide-react';
+import { Database, Server, HardDrive, Upload, Download, Settings, Check, AlertCircle } from 'lucide-react';
 
 export default function DatabaseSettings({ onClose }) {
   const [dbMode, setDbMode] = useState('sqlite'); // 'sqlite' | 'separate' | 'hybrid'
@@ -138,6 +138,48 @@ export default function DatabaseSettings({ onClose }) {
       }
     } catch (error) {
       setStatus({ type: 'error', message: `Errore: ${error.message}` });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownloadSqlite = async () => {
+    setLoading(true);
+    setStatus({ type: 'info', message: 'Download in corso...' });
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/database/download-sqlite`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        // Get filename from Content-Disposition header or use default
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let filename = 'pyarchinit_db.sqlite';
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+          if (filenameMatch) filename = filenameMatch[1];
+        }
+
+        // Download file
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        setStatus({ type: 'success', message: `Database scaricato: ${filename}` });
+      } else {
+        const error = await response.json();
+        setStatus({ type: 'error', message: `Errore: ${error.detail}` });
+      }
+    } catch (error) {
+      setStatus({ type: 'error', message: `Errore di download: ${error.message}` });
     } finally {
       setLoading(false);
     }
@@ -354,6 +396,36 @@ export default function DatabaseSettings({ onClose }) {
                 }}
               >
                 Carica
+              </button>
+            </div>
+
+            {/* Download Database */}
+            <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #e2e8f0' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#2d3748' }}>
+                Scarica Database Corrente
+              </h3>
+              <p style={{ fontSize: '14px', color: '#718096', marginBottom: '12px' }}>
+                Scarica una copia del database SQLite attualmente in uso
+              </p>
+              <button
+                onClick={handleDownloadSqlite}
+                disabled={loading}
+                style={{
+                  padding: '12px 24px',
+                  background: loading ? '#cbd5e0' : 'white',
+                  color: '#667eea',
+                  border: '2px solid #667eea',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <Download size={20} />
+                Scarica Database
               </button>
             </div>
           </div>
