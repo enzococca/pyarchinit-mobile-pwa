@@ -339,6 +339,52 @@ class MobileNote(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class MediaThumb(Base):
+    """PyArchInit media_thumb_table - Thumbnail and resized image metadata"""
+    __tablename__ = "media_thumb_table"
+
+    id_media_thumb = Column(Integer, primary_key=True, autoincrement=True)
+    id_media = Column(Integer, ForeignKey("media_table.id_media", ondelete="CASCADE"), nullable=False)
+
+    # File information
+    mediatype = Column(String(50))
+    media_filename = Column(String(255))
+    media_thumb_filename = Column(String(255))
+    filetype = Column(String(50))
+
+    # File paths
+    filepath = Column(Text)  # Path to thumbnail
+    path_resize = Column(Text)  # Path to resized image
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class MediaToEntity(Base):
+    """PyArchInit media_to_entity_table - Links media files to entities (US, TOMBA, etc.)"""
+    __tablename__ = "media_to_entity_table"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # Entity reference
+    id_entity = Column(Integer, nullable=False)
+    entity_type = Column(String(100))  # 'US', 'TOMBA', 'MATERIALE', etc.
+    table_name = Column(String(100))  # 'us_table', 'tomba_table', etc.
+
+    # Media reference
+    id_media = Column(Integer, ForeignKey("media_table.id_media", ondelete="CASCADE"), nullable=False)
+    filepath = Column(Text)
+    media_name = Column(String(255))
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Indexes for better performance
+    __table_args__ = (
+        Index('idx_media_entity', 'id_entity', 'entity_type'),
+    )
+
+
 def get_db():
     """Dependency to get database session"""
     db = SessionLocal()
