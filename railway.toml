@@ -1,9 +1,9 @@
 [build]
-builder = "nixpacks"
-watchPatterns = ["backend/**"]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+watchPatterns = ["backend/**", "requirements.txt", "Dockerfile"]
 
 [deploy]
-startCommand = "cd backend && python init_auth_tables.py && uvicorn main:app --host 0.0.0.0 --port $PORT"
 healthcheckPath = "/health"
 healthcheckTimeout = 100
 restartPolicyType = "on_failure"
