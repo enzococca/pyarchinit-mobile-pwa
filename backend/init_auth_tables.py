@@ -16,10 +16,9 @@ from config import settings
 def init_auth_tables():
     """Create auth tables in SQLite database"""
 
-    # Always use a consistent absolute path in the script's directory
-    # This avoids issues with misconfigured SQLITE_DB_PATH environment variables
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    db_path = Path(os.path.join(script_dir, "pyarchinit_db.sqlite"))
+    # Use /tmp for Railway and other read-only filesystems
+    # Railway filesystem is read-only except /tmp
+    db_path = Path("/tmp/pyarchinit_db.sqlite")
 
     print(f"Initializing auth tables in: {db_path}")
 

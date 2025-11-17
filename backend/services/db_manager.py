@@ -49,7 +49,8 @@ class DatabaseManager:
             if settings.SQLITE_DB_PATH:
                 db_path = settings.SQLITE_DB_PATH
             else:
-                db_path = "pyarchinit_db.sqlite"
+                # Use /tmp for Railway and other read-only filesystems
+                db_path = "/tmp/pyarchinit_db.sqlite"
             return f"sqlite:///{db_path}"
 
         elif self.mode == "separate":
