@@ -55,12 +55,17 @@ class Settings(BaseSettings):
     
     # Security
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
-    # CORS Origins - Parse from environment variable (comma-separated list)
+    # CORS Origins - Comma-separated string that will be parsed into a list
     # Example: "http://localhost:5173,https://pyarchinit-mobile-pwa.vercel.app"
-    CORS_ORIGINS: list = os.getenv(
+    CORS_ORIGINS_STR: str = os.getenv(
         "CORS_ORIGINS",
-        "http://localhost:5173,http://localhost:3000,https://pyarchinit-mobile-pwa.vercel.app,https://pyarchinit-mobile-pwa-*.vercel.app"
-    ).split(",")
+        "http://localhost:5173,http://localhost:3000,https://pyarchinit-mobile-pwa.vercel.app"
+    )
+
+    @property
+    def CORS_ORIGINS(self) -> list:
+        """Parse comma-separated CORS origins into a list"""
+        return [origin.strip() for origin in self.CORS_ORIGINS_STR.split(",") if origin.strip()]
     
     class Config:
         env_file = ".env"
