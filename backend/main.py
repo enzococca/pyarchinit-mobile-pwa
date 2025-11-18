@@ -55,13 +55,21 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS - Allow all origins for development (ngrok, mobile testing)
+# CORS configuration
+# For production, use specific origins from settings
+# For development/testing, allow all origins
+cors_origins = ["*"]  # Default to allow all for development
+if os.getenv("ENVIRONMENT") == "production":
+    # In production, use specific origins from config
+    cors_origins = settings.CORS_ORIGINS
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for development
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Include routers

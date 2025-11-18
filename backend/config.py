@@ -55,7 +55,12 @@ class Settings(BaseSettings):
     
     # Security
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
-    CORS_ORIGINS: list = ["http://localhost:5173", "http://localhost:3000"]
+    # CORS Origins - Parse from environment variable (comma-separated list)
+    # Example: "http://localhost:5173,https://pyarchinit-mobile-pwa.vercel.app"
+    CORS_ORIGINS: list = os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:5173,http://localhost:3000,https://pyarchinit-mobile-pwa.vercel.app,https://pyarchinit-mobile-pwa-*.vercel.app"
+    ).split(",")
     
     class Config:
         env_file = ".env"
