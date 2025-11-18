@@ -19,18 +19,34 @@ class MediaProcessor:
 
     def __init__(self):
         # Ensure media directories exist
-        os.makedirs(settings.PYARCHINIT_MEDIA_ROOT, exist_ok=True)
+        try:
+            os.makedirs(settings.PYARCHINIT_MEDIA_ROOT, exist_ok=True)
+        except (OSError, PermissionError) as e:
+            print(f"⚠️  Warning: Could not create media root directory: {e}")
+
         if hasattr(settings, 'PYARCHINIT_MEDIA_THUMB') and settings.PYARCHINIT_MEDIA_THUMB:
-            os.makedirs(settings.PYARCHINIT_MEDIA_THUMB, exist_ok=True)
+            try:
+                os.makedirs(settings.PYARCHINIT_MEDIA_THUMB, exist_ok=True)
+            except (OSError, PermissionError) as e:
+                print(f"⚠️  Warning: Could not create thumb directory: {e}")
         else:
             settings.PYARCHINIT_MEDIA_THUMB = os.path.join(settings.PYARCHINIT_MEDIA_ROOT, "thumb")
-            os.makedirs(settings.PYARCHINIT_MEDIA_THUMB, exist_ok=True)
+            try:
+                os.makedirs(settings.PYARCHINIT_MEDIA_THUMB, exist_ok=True)
+            except (OSError, PermissionError) as e:
+                print(f"⚠️  Warning: Could not create thumb directory: {e}")
 
         if hasattr(settings, 'PYARCHINIT_MEDIA_RESIZE') and settings.PYARCHINIT_MEDIA_RESIZE:
-            os.makedirs(settings.PYARCHINIT_MEDIA_RESIZE, exist_ok=True)
+            try:
+                os.makedirs(settings.PYARCHINIT_MEDIA_RESIZE, exist_ok=True)
+            except (OSError, PermissionError) as e:
+                print(f"⚠️  Warning: Could not create resize directory: {e}")
         else:
             settings.PYARCHINIT_MEDIA_RESIZE = os.path.join(settings.PYARCHINIT_MEDIA_ROOT, "resize")
-            os.makedirs(settings.PYARCHINIT_MEDIA_RESIZE, exist_ok=True)
+            try:
+                os.makedirs(settings.PYARCHINIT_MEDIA_RESIZE, exist_ok=True)
+            except (OSError, PermissionError) as e:
+                print(f"⚠️  Warning: Could not create resize directory: {e}")
 
     async def process_image(
         self,

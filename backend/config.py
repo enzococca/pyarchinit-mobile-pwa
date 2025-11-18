@@ -92,4 +92,7 @@ for path in [settings.PYARCHINIT_MEDIA_THUMB,
              settings.PYARCHINIT_3D_MODELS_WEB,
              settings.PYARCHINIT_3D_MODELS_AR,
              settings.PYARCHINIT_3D_MODELS_THUMBS]:
-    path.mkdir(parents=True, exist_ok=True)
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+    except (OSError, PermissionError) as e:
+        print(f"⚠️  Warning: Could not create directory {path}: {e}")

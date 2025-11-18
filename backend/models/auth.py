@@ -83,12 +83,12 @@ class User(AuthBase):
 
     # Relationships
     owned_projects = relationship(
-        "Project",
+        "backend.models.auth.Project",
         back_populates="owner",
-        foreign_keys="Project.owner_user_id"
+        foreign_keys="backend.models.auth.Project.owner_user_id"
     )
     project_collaborations = relationship(
-        "ProjectCollaborator",
+        "backend.models.auth.ProjectCollaborator",
         back_populates="user"
     )
 
@@ -116,8 +116,8 @@ class Project(AuthBase):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    owner = relationship("User", back_populates="owned_projects", foreign_keys=[owner_user_id])
-    collaborators = relationship("ProjectCollaborator", back_populates="project")
+    owner = relationship("backend.models.auth.User", back_populates="owned_projects", foreign_keys=[owner_user_id])
+    collaborators = relationship("backend.models.auth.ProjectCollaborator", back_populates="project")
 
     def __repr__(self):
         return f"<Project(id={self.id}, name='{self.name}', owner_id={self.owner_user_id})>"
@@ -140,8 +140,8 @@ class ProjectCollaborator(AuthBase):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
-    project = relationship("Project", back_populates="collaborators")
-    user = relationship("User", back_populates="project_collaborations")
+    project = relationship("backend.models.auth.Project", back_populates="collaborators")
+    user = relationship("backend.models.auth.User", back_populates="project_collaborations")
 
     def __repr__(self):
         return f"<ProjectCollaborator(project_id={self.project_id}, user_id={self.user_id}, role={self.role})>"
