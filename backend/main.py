@@ -49,6 +49,17 @@ if settings.USE_SQLITE:
     from backend.init_auth_tables import init_auth_tables
     init_auth_tables()
 
+# Run automatic migrations (add missing columns to existing tables)
+try:
+    from backend.migrations.auto_migrate import run_auto_migrations
+    from backend.services.db_manager import get_engine
+
+    engine = get_engine()
+    run_auto_migrations(engine)
+except Exception as e:
+    import logging
+    logging.warning(f"Auto-migration warning: {e}")
+
 app = FastAPI(
     title="PyArchInit Mobile API",
     description="API per gestione note vocali e foto archeologiche",
