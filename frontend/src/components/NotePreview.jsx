@@ -3,8 +3,7 @@ import axios from 'axios';
 import DuplicateDialog from './DuplicateDialog';
 import RapportiEditor from './RapportiEditor';
 import { updateAudioNote } from '../services/offlineStorage';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+import { API_BASE } from '../config/api';
 
 function NotePreview({ note, onClose, onSave, onRefresh }) {
   const [editing, setEditing] = useState(false);

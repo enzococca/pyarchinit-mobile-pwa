@@ -1,3 +1,4 @@
 # Vercel rebuild trigger - Force cache clear
-# Updated: Mon Nov 17 20:30:00 CET 2025
+# Updated: Mon Nov 18 01:00:00 CET 2025
+# Fixed NotePreview.jsx hardcoded API_BASE - CRITICAL FIX
 # This file forces Vercel to rebuild and clear all caches
