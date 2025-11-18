@@ -385,6 +385,60 @@ class MediaToEntity(Base):
     )
 
 
+class Model3D(Base):
+    """3D Model table - Store 3D scans (LiDAR, photogrammetry, manual uploads)"""
+    __tablename__ = "model_3d_table"
+
+    id_3d_model = Column(Integer, primary_key=True, autoincrement=True)
+
+    # Entity associations
+    id_entity = Column(Integer)  # ID of related entity (US, Site, etc.)
+    entity_type = Column(String(100))  # 'US', 'SITE', 'TOMBA', 'MATERIALE', etc.
+    sito = Column(String(200), ForeignKey("site_table.sito"))
+    us_id = Column(Integer, ForeignKey("us_table.id_us"))
+
+    # File information
+    filename = Column(String(255), nullable=False)
+    filepath = Column(Text, nullable=False)  # Path to 3D model file
+    file_format = Column(String(20), nullable=False)  # 'OBJ', 'GLTF', 'GLB', 'USDZ'
+    file_size = Column(Integer)  # Size in bytes
+
+    # Model metadata
+    vertices_count = Column(Integer)
+    faces_count = Column(Integer)
+    model_name = Column(String(255))
+    description = Column(Text)
+
+    # Capture method and quality
+    capture_method = Column(String(50))  # 'lidar', 'photogrammetry', 'manual_upload', 'external_app'
+    capture_app = Column(String(100))  # 'Polycam', 'KIRI Engine', '3D Scanner App', etc.
+    quality_level = Column(String(20))  # 'low', 'medium', 'high', 'ultra'
+
+    # Geographic data
+    gps_lat = Column(Float)
+    gps_lon = Column(Float)
+    gps_altitude = Column(Float)
+
+    # AR/Web viewing paths
+    web_viewer_path = Column(Text)  # Path to web-optimized version (GLTF/GLB)
+    ar_quicklook_path = Column(Text)  # Path to USDZ version for iOS AR Quick Look
+    thumbnail_path = Column(Text)  # Path to thumbnail image
+
+    # Metadata
+    uploaded_by = Column(String(200))
+    processed_at = Column(DateTime)
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Indexes
+    __table_args__ = (
+        Index('idx_3d_model_entity', 'id_entity', 'entity_type'),
+        Index('idx_3d_model_sito', 'sito'),
+    )
+
+
 def get_db():
     """Dependency to get database session"""
     db = SessionLocal()

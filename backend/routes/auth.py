@@ -72,7 +72,7 @@ class LoginResponse(BaseModel):
 # Endpoints
 # ============================================
 
-@router.post("/register", response_model=LoginResponse)
+@router.post("/register")
 async def register(
     request: RegisterRequest,
     db: Session = Depends(get_db)
@@ -80,10 +80,11 @@ async def register(
     """
     Register new user
 
-    - Creates user account
-    - In separate mode: Creates dedicated database
-    - In hybrid mode: Creates default project
-    - Returns access token
+    - Creates user account with 'pending' approval status
+    - Account must be approved by admin before login
+    - In separate mode: Creates dedicated database (after approval)
+    - In hybrid mode: Creates default project (after approval)
+    - Returns success message or token (if auto-approved)
     """
     # Register user
     user = AuthService.register_user(
@@ -93,6 +94,18 @@ async def register(
         db=db
     )
 
+    # Check approval status
+    approval_status = getattr(user, 'approval_status', 'approved')
+
+    if approval_status == "pending":
+        # Account pending approval
+        return {
+            "message": "Registration successful. Your account is pending admin approval.",
+            "status": "pending",
+            "email": user.email
+        }
+
+    # Auto-approved (shouldn't happen with current setup, but handle it)
     # Generate token
     # Handle both Enum (PostgreSQL) and String (SQLite) for role
     role_str = user.role.value if hasattr(user.role, 'value') else user.role

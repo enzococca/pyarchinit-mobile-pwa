@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Images, Video, Box, Download, X, Filter, RefreshCw } from 'lucide-react';
+import { Images, Video, Box, Download, X, Filter, RefreshCw, Maximize2 } from 'lucide-react';
+import ModelViewer from './ModelViewer';
 
 /**
  * Media card component with hover states
@@ -224,6 +225,14 @@ export default function MediaGallery() {
   const [selectedFilter, setSelectedFilter] = useState('all'); // 'all' | 'image' | 'video' | '3d_model'
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMedia, setSelectedMedia] = useState(null);
+  const [viewing3DModel, setViewing3DModel] = useState(null);
+  const [isIOS, setIsIOS] = useState(false);
+
+  useEffect(() => {
+    // Detect iOS device
+    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    setIsIOS(iOS);
+  }, []);
 
   useEffect(() => {
     loadMedia();
@@ -575,6 +584,94 @@ export default function MediaGallery() {
                 />
               )}
 
+              {selectedMedia.media_type === '3d_model' && (
+                <div style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  borderRadius: '8px',
+                  padding: '48px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '16px'
+                }}>
+                  <Box size={64} style={{ color: 'white', opacity: 0.9 }} />
+                  <p style={{
+                    color: 'white',
+                    fontSize: '16px',
+                    fontWeight: '500',
+                    margin: 0,
+                    textAlign: 'center'
+                  }}>
+                    Modello 3D
+                  </p>
+                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <button
+                      onClick={() => {
+                        setViewing3DModel(`${import.meta.env.VITE_API_URL}/api/media/download/${selectedMedia.id_media}/original`);
+                        setSelectedMedia(null);
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#5568d3'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = '#667eea'}
+                      style={{
+                        background: '#667eea',
+                        color: 'white',
+                        padding: '12px 24px',
+                        borderRadius: '8px',
+                        border: '2px solid white',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontWeight: '600',
+                        fontSize: '15px',
+                        transition: 'all 0.2s',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+                      }}
+                    >
+                      <Maximize2 size={20} />
+                      Visualizza in 3D
+                    </button>
+                    {isIOS && (
+                      <a
+                        rel="ar"
+                        href={`${import.meta.env.VITE_API_URL}/api/media/download/${selectedMedia.id_media}/original`}
+                        style={{
+                          background: '#10b981',
+                          color: 'white',
+                          padding: '12px 24px',
+                          borderRadius: '8px',
+                          border: '2px solid white',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontWeight: '600',
+                          fontSize: '15px',
+                          transition: 'all 0.2s',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                          textDecoration: 'none'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = '#059669'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = '#10b981'}
+                      >
+                        <Box size={20} />
+                        Visualizza in AR
+                      </a>
+                    )}
+                  </div>
+                  {isIOS && (
+                    <p style={{
+                      color: 'rgba(255,255,255,0.8)',
+                      fontSize: '13px',
+                      margin: 0,
+                      textAlign: 'center'
+                    }}>
+                      Il pulsante AR funziona solo con file USDZ
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Info */}
               <div style={{
                 display: 'flex',
@@ -683,6 +780,14 @@ export default function MediaGallery() {
           <li>Scarica le versioni originali, ridimensionate o thumbnail</li>
         </ul>
       </div>
+
+      {/* 3D Model Viewer */}
+      {viewing3DModel && (
+        <ModelViewer
+          modelUrl={viewing3DModel}
+          onClose={() => setViewing3DModel(null)}
+        />
+      )}
     </div>
   );
 }

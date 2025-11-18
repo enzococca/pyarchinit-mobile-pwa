@@ -16,13 +16,13 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from backend.config import settings
-from backend.models.database import get_db, Media, MobileNote, US, Site, init_db
+from backend.models.database import get_db, Media, MobileNote, US, Site, Model3D, init_db
 from backend.services.image_processor import ImageProcessor, ImageValidator
 from backend.services.ai_processor import ArchaeologicalAIInterpreter
 from backend.services.stratigraphic_utils import parse_relationships, format_relationships_for_db
 from backend.services.auth_service import get_current_user
 from backend.models.auth import User
-from backend.routes import auth, media, database, notes
+from backend.routes import auth, media, database, notes, tropy
 
 
 # Pydantic models for API requests
@@ -69,6 +69,7 @@ app.include_router(auth.router)
 app.include_router(media.router)
 app.include_router(database.router)
 app.include_router(notes.router)
+app.include_router(tropy.router)
 
 # Inizializza servizi
 image_processor = ImageProcessor()
@@ -175,6 +176,311 @@ async def test_database_connection(config: DatabaseConfig):
             "success": False,
             "error": str(e)
         }
+
+
+# ============= DATABASE MODE MANAGEMENT =============
+
+@app.get("/api/auth/db-mode")
+async def get_database_mode(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get current user's database mode configuration"""
+    from backend.models.auth import User
+
+    user = db.query(User).filter(User.id == current_user['user_id']).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {
+        "mode": user.db_mode or "sqlite",
+        "config": {
+            "host": user.pg_host,
+            "port": user.pg_port,
+            "database": user.pg_database,
+            "user": user.pg_user
+        } if user.db_mode in ["separate", "hybrid"] else None
+    }
+
+
+@app.post("/api/database/configure")
+async def configure_database(
+    mode: str = Body(...),
+    config: dict = Body(None),
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Save database configuration for current user"""
+    from backend.models.auth import User
+
+    # Validate mode
+    if mode not in ["sqlite", "separate", "hybrid"]:
+        raise HTTPException(status_code=400, detail="Invalid database mode")
+
+    user = db.query(User).filter(User.id == current_user['user_id']).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Update user database mode
+    user.db_mode = mode
+
+    # If PostgreSQL mode, save connection details
+    if mode in ["separate", "hybrid"] and config:
+        user.pg_host = config.get("host")
+        user.pg_port = config.get("port")
+        user.pg_database = config.get("database")
+        user.pg_user = config.get("user")
+        user.pg_password = config.get("password")  # TODO: Encrypt in production
+
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"Database mode updated to {mode}",
+        "mode": mode
+    }
+
+
+@app.post("/api/database/upload-sqlite")
+async def upload_sqlite_database(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Upload SQLite database file for current user"""
+    from backend.models.auth import User
+    import shutil
+
+    # Validate file extension
+    if not file.filename.endswith(('.sqlite', '.db')):
+        raise HTTPException(status_code=400, detail="File must be .sqlite or .db")
+
+    user = db.query(User).filter(User.id == current_user['user_id']).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    try:
+        # Create user-specific SQLite directory
+        sqlite_dir = settings.PYARCHINIT_MEDIA_ROOT / "sqlite" / str(user.id)
+        sqlite_dir.mkdir(parents=True, exist_ok=True)
+
+        # Save uploaded file
+        db_filename = f"pyarchinit_user_{user.id}.sqlite"
+        db_path = sqlite_dir / db_filename
+
+        with open(db_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        # Update user's SQLite path
+        user.sqlite_db_path = str(db_path)
+        user.db_mode = "sqlite"
+        db.commit()
+
+        return {
+            "success": True,
+            "message": "SQLite database uploaded successfully",
+            "path": str(db_path)
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error uploading database: {str(e)}")
+
+
+@app.get("/api/database/download-sqlite")
+async def download_sqlite_database(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Download current user's SQLite database"""
+    from backend.models.auth import User
+
+    user = db.query(User).filter(User.id == current_user['user_id']).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # If user has a custom SQLite file, return that
+    if user.sqlite_db_path and Path(user.sqlite_db_path).exists():
+        db_path = Path(user.sqlite_db_path)
+        filename = f"pyarchinit_user_{user.id}_{datetime.now().strftime('%Y%m%d')}.sqlite"
+
+        return FileResponse(
+            path=str(db_path),
+            filename=filename,
+            media_type="application/octet-stream"
+        )
+
+    # Otherwise, return the system SQLite database if USE_SQLITE is enabled
+    if settings.USE_SQLITE:
+        system_db_path = "/tmp/pyarchinit_db.sqlite"
+        if Path(system_db_path).exists():
+            filename = f"pyarchinit_{datetime.now().strftime('%Y%m%d')}.sqlite"
+            return FileResponse(
+                path=system_db_path,
+                filename=filename,
+                media_type="application/octet-stream"
+            )
+
+    raise HTTPException(status_code=404, detail="No SQLite database found")
+
+
+# ============= ADMIN USER MANAGEMENT =============
+
+def get_current_admin(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Verify current user is an admin"""
+    from backend.models.auth import User
+
+    user = db.query(User).filter(User.id == current_user['user_id']).first()
+    if not user or user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
+
+@app.get("/api/admin/users")
+async def list_all_users(admin: dict = Depends(get_current_admin), db: Session = Depends(get_db)):
+    """List all users (admin only)"""
+    from backend.models.auth import User
+
+    users = db.query(User).all()
+
+    return {
+        "users": [
+            {
+                "id": u.id,
+                "email": u.email,
+                "name": u.name,
+                "role": u.role,
+                "is_active": u.is_active,
+                "approval_status": getattr(u, 'approval_status', 'approved'),
+                "db_mode": u.db_mode,
+                "created_at": u.created_at.isoformat() if u.created_at else None
+            }
+            for u in users
+        ]
+    }
+
+
+@app.post("/api/admin/users/{user_id}/toggle-active")
+async def toggle_user_active(
+    user_id: int,
+    is_active: bool = Body(...),
+    admin: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Activate or deactivate a user (admin only)"""
+    from backend.models.auth import User
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Prevent admin from deactivating themselves
+    if user.id == admin.id:
+        raise HTTPException(status_code=400, detail="Cannot deactivate your own account")
+
+    user.is_active = is_active
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"User {'activated' if is_active else 'deactivated'} successfully",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "is_active": user.is_active
+        }
+    }
+
+
+@app.post("/api/admin/users/{user_id}/role")
+async def change_user_role(
+    user_id: int,
+    role: str = Body(...),
+    admin: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Change user role (admin only)"""
+    from backend.models.auth import User
+
+    # Validate role
+    valid_roles = ['admin', 'archaeologist', 'student', 'viewer']
+    if role not in valid_roles:
+        raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {', '.join(valid_roles)}")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Prevent admin from changing their own role
+    if user.id == admin.id:
+        raise HTTPException(status_code=400, detail="Cannot change your own role")
+
+    user.role = role
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"User role updated to {role}",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "role": user.role
+        }
+    }
+
+
+@app.post("/api/admin/users/{user_id}/approve")
+async def approve_user(
+    user_id: int,
+    admin: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Approve user registration (admin only)"""
+    from backend.models.auth import User
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Update approval status
+    user.approval_status = "approved"
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"User {user.email} approved successfully",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "approval_status": user.approval_status
+        }
+    }
+
+
+@app.post("/api/admin/users/{user_id}/reject")
+async def reject_user(
+    user_id: int,
+    admin: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Reject user registration (admin only)"""
+    from backend.models.auth import User
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Update approval status
+    user.approval_status = "rejected"
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"User {user.email} rejected",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "approval_status": user.approval_status
+        }
+    }
 
 
 # ============= GESTIONE SITI =============
@@ -401,6 +707,197 @@ async def get_media_by_entity(
             for m in media_list
         ]
     }
+
+# ============= MODELLI 3D =============
+
+@app.post("/api/3d-models/upload")
+async def upload_3d_model(
+    file: UploadFile = File(...),
+    entity_type: str = Form(...),  # 'US', 'SITE', 'TOMBA'
+    entity_id: Optional[int] = Form(None),
+    sito: str = Form(...),
+    us_id: Optional[int] = Form(None),
+    model_name: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    capture_method: Optional[str] = Form("manual_upload"),  # 'lidar', 'photogrammetry', 'manual_upload', 'external_app'
+    capture_app: Optional[str] = Form(None),  # 'Polycam', 'KIRI Engine', etc.
+    gps_lat: Optional[float] = Form(None),
+    gps_lon: Optional[float] = Form(None),
+    gps_altitude: Optional[float] = Form(None),
+    uploaded_by: Optional[str] = Form(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Upload 3D model (OBJ, GLTF, GLB, USDZ)
+    - Validates file format and size
+    - Saves to 3D models directory
+    - Creates database record
+    """
+
+    # Validate file extension
+    file_ext = Path(file.filename).suffix.lower()
+    if file_ext not in settings.ALLOWED_3D_MODEL_FORMATS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Formato non supportato. Formati permessi: {', '.join(settings.ALLOWED_3D_MODEL_FORMATS)}"
+        )
+
+    # Read file and check size
+    contents = await file.read()
+    file_size = len(contents)
+
+    if file_size > settings.MAX_3D_MODEL_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File troppo grande. Massimo {settings.MAX_3D_MODEL_SIZE / (1024*1024):.0f}MB"
+        )
+
+    try:
+        # Generate filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_sito = sito.replace(" ", "_")
+        filename = f"{safe_sito}_{entity_type}_{timestamp}{file_ext}"
+
+        # Save to original directory
+        filepath = settings.PYARCHINIT_3D_MODELS_ORIGINAL / filename
+        with open(filepath, "wb") as f:
+            f.write(contents)
+
+        # Determine file format
+        file_format = file_ext.replace(".", "").upper()
+
+        # Create database record
+        model_3d = Model3D(
+            id_entity=entity_id,
+            entity_type=entity_type,
+            sito=sito,
+            us_id=us_id,
+            filename=filename,
+            filepath=str(filepath),
+            file_format=file_format,
+            file_size=file_size,
+            model_name=model_name or filename,
+            description=description,
+            capture_method=capture_method,
+            capture_app=capture_app,
+            gps_lat=gps_lat,
+            gps_lon=gps_lon,
+            gps_altitude=gps_altitude,
+            uploaded_by=uploaded_by,
+            created_at=datetime.utcnow()
+        )
+
+        db.add(model_3d)
+        db.commit()
+        db.refresh(model_3d)
+
+        return {
+            "status": "success",
+            "model_id": model_3d.id_3d_model,
+            "filename": filename,
+            "file_format": file_format,
+            "file_size": file_size,
+            "filepath": str(filepath),
+            "metadata": {
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "sito": sito,
+                "capture_method": capture_method,
+                "capture_app": capture_app,
+                "gps": {
+                    "lat": gps_lat,
+                    "lon": gps_lon,
+                    "altitude": gps_altitude
+                }
+            }
+        }
+
+    except Exception as e:
+        db.rollback()
+        # Clean up file if saved
+        if filepath.exists():
+            filepath.unlink()
+        raise HTTPException(status_code=500, detail=f"Errore durante l'upload: {str(e)}")
+
+
+@app.get("/api/3d-models/{model_id}")
+async def get_3d_model(model_id: int, db: Session = Depends(get_db)):
+    """Get 3D model by ID"""
+    model = db.query(Model3D).filter(Model3D.id_3d_model == model_id).first()
+
+    if not model:
+        raise HTTPException(status_code=404, detail="Modello 3D non trovato")
+
+    return {
+        "id": model.id_3d_model,
+        "filename": model.filename,
+        "file_format": model.file_format,
+        "file_size": model.file_size,
+        "model_name": model.model_name,
+        "description": model.description,
+        "entity_type": model.entity_type,
+        "entity_id": model.id_entity,
+        "sito": model.sito,
+        "capture_method": model.capture_method,
+        "capture_app": model.capture_app,
+        "gps": {
+            "lat": model.gps_lat,
+            "lon": model.gps_lon,
+            "altitude": model.gps_altitude
+        },
+        "uploaded_by": model.uploaded_by,
+        "created_at": model.created_at.isoformat() if model.created_at else None
+    }
+
+
+@app.get("/api/3d-models/by-entity/{entity_type}/{entity_id}")
+async def get_3d_models_by_entity(
+    entity_type: str,
+    entity_id: int,
+    db: Session = Depends(get_db)
+):
+    """List 3D models for entity (US, SITE, etc.)"""
+    models = db.query(Model3D).filter(
+        Model3D.entity_type == entity_type,
+        Model3D.id_entity == entity_id
+    ).all()
+
+    return {
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "count": len(models),
+        "models": [
+            {
+                "id": m.id_3d_model,
+                "filename": m.filename,
+                "file_format": m.file_format,
+                "model_name": m.model_name,
+                "capture_method": m.capture_method,
+                "file_size": m.file_size,
+                "created_at": m.created_at.isoformat() if m.created_at else None
+            }
+            for m in models
+        ]
+    }
+
+
+@app.get("/api/3d-models/download/{model_id}")
+async def download_3d_model(model_id: int, db: Session = Depends(get_db)):
+    """Download 3D model file"""
+    model = db.query(Model3D).filter(Model3D.id_3d_model == model_id).first()
+
+    if not model:
+        raise HTTPException(status_code=404, detail="Modello 3D non trovato")
+
+    filepath = Path(model.filepath)
+    if not filepath.exists():
+        raise HTTPException(status_code=404, detail="File del modello non trovato")
+
+    return FileResponse(
+        path=str(filepath),
+        filename=model.filename,
+        media_type="application/octet-stream"
+    )
 
 # ============= NOTE VOCALI =============
 

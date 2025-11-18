@@ -57,8 +57,22 @@ class User(Base):
     name = Column(String(255), nullable=False)
     role = Column(RoleColumn, default="archaeologist")  # Use string default for SQLite compatibility
     is_active = Column(Boolean, default=True)
+    approval_status = Column(String(50), default="pending")  # "pending" | "approved" | "rejected"
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Database Mode Configuration
+    db_mode = Column(String(50), default="sqlite")  # "sqlite" | "separate" | "hybrid"
+
+    # PostgreSQL connection settings (for separate mode)
+    pg_host = Column(String(255), nullable=True)
+    pg_port = Column(Integer, nullable=True)
+    pg_database = Column(String(255), nullable=True)
+    pg_user = Column(String(255), nullable=True)
+    pg_password = Column(String(255), nullable=True)  # Should be encrypted in production
+
+    # SQLite database path (for personal SQLite mode)
+    sqlite_db_path = Column(String(500), nullable=True)
 
     # Relationships
     owned_projects = relationship(

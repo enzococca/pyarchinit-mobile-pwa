@@ -21,11 +21,19 @@ class Settings(BaseSettings):
     SEPARATE_DB_NAME_TEMPLATE: str = os.getenv("SEPARATE_DB_NAME_TEMPLATE", "pyarchinit_user")
     
     # Percorsi PyArchInit Media
-    PYARCHINIT_MEDIA_ROOT: Path = Path(os.getenv("PYARCHINIT_MEDIA_ROOT", "/tmp/pyarchinit_media"))
+    # Railway uses /data for persistent volumes
+    PYARCHINIT_MEDIA_ROOT: Path = Path(os.getenv("PYARCHINIT_MEDIA_ROOT", "/data/pyarchinit_media"))
     PYARCHINIT_MEDIA_THUMB: Path = PYARCHINIT_MEDIA_ROOT / "thumb"
     PYARCHINIT_MEDIA_RESIZE: Path = PYARCHINIT_MEDIA_ROOT / "resize"
     PYARCHINIT_MEDIA_ORIGINAL: Path = PYARCHINIT_MEDIA_ROOT / "original"
-    
+
+    # 3D Models storage paths
+    PYARCHINIT_3D_MODELS_ROOT: Path = PYARCHINIT_MEDIA_ROOT / "3d_models"
+    PYARCHINIT_3D_MODELS_ORIGINAL: Path = PYARCHINIT_3D_MODELS_ROOT / "original"  # OBJ, GLTF uploads
+    PYARCHINIT_3D_MODELS_WEB: Path = PYARCHINIT_3D_MODELS_ROOT / "web"  # Optimized GLTF/GLB
+    PYARCHINIT_3D_MODELS_AR: Path = PYARCHINIT_3D_MODELS_ROOT / "ar"  # USDZ for iOS AR Quick Look
+    PYARCHINIT_3D_MODELS_THUMBS: Path = PYARCHINIT_3D_MODELS_ROOT / "thumbs"  # Preview images
+
     # Dimensioni immagini (compatibili con PyArchInit)
     THUMB_SIZE: tuple = (150, 150)
     RESIZE_SIZE: tuple = (800, 600)
@@ -37,8 +45,10 @@ class Settings(BaseSettings):
     # Upload
     MAX_AUDIO_SIZE: int = 25 * 1024 * 1024  # 25MB
     MAX_IMAGE_SIZE: int = 10 * 1024 * 1024  # 10MB
+    MAX_3D_MODEL_SIZE: int = 100 * 1024 * 1024  # 100MB for 3D models
     ALLOWED_AUDIO_FORMATS: list = [".mp3", ".wav", ".m4a", ".ogg", ".webm"]
     ALLOWED_IMAGE_FORMATS: list = [".jpg", ".jpeg", ".png", ".tiff", ".tif"]
+    ALLOWED_3D_MODEL_FORMATS: list = [".obj", ".gltf", ".glb", ".usdz"]
     
     # Redis per queue
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -52,8 +62,12 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-# Crea directory media se non esistono
-for path in [settings.PYARCHINIT_MEDIA_THUMB, 
-             settings.PYARCHINIT_MEDIA_RESIZE, 
-             settings.PYARCHINIT_MEDIA_ORIGINAL]:
+# Crea directory media e 3D models se non esistono
+for path in [settings.PYARCHINIT_MEDIA_THUMB,
+             settings.PYARCHINIT_MEDIA_RESIZE,
+             settings.PYARCHINIT_MEDIA_ORIGINAL,
+             settings.PYARCHINIT_3D_MODELS_ORIGINAL,
+             settings.PYARCHINIT_3D_MODELS_WEB,
+             settings.PYARCHINIT_3D_MODELS_AR,
+             settings.PYARCHINIT_3D_MODELS_THUMBS]:
     path.mkdir(parents=True, exist_ok=True)

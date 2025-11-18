@@ -233,6 +233,19 @@ class AuthService:
                 detail="User account is deactivated"
             )
 
+        # Check if user is approved
+        approval_status = getattr(user, 'approval_status', 'approved')  # Default to approved for existing users
+        if approval_status == "pending":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account pending admin approval"
+            )
+        elif approval_status == "rejected":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account registration was rejected"
+            )
+
         # Create token
         # Handle both Enum (PostgreSQL) and String (SQLite) for role
         role_str = user.role.value if hasattr(user.role, 'value') else user.role
@@ -300,6 +313,19 @@ def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is deactivated"
+        )
+
+    # Check if user is approved
+    approval_status = getattr(user, 'approval_status', 'approved')  # Default to approved for existing users
+    if approval_status == "pending":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account pending admin approval"
+        )
+    elif approval_status == "rejected":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account registration was rejected"
         )
 
     return user

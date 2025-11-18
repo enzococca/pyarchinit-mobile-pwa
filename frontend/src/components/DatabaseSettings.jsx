@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Database, Server, HardDrive, Upload, Download, Settings, Check, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Database, Server, HardDrive, Upload, Download, Settings, Check, AlertCircle, LogOut } from 'lucide-react';
 
 export default function DatabaseSettings({ onClose }) {
+  const navigate = useNavigate();
   const [dbMode, setDbMode] = useState('sqlite'); // 'sqlite' | 'separate' | 'hybrid'
   const [currentMode, setCurrentMode] = useState(null);
   const [sqliteFile, setSqliteFile] = useState(null);
@@ -183,6 +185,14 @@ export default function DatabaseSettings({ onClose }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLogout = () => {
+    // Clear authentication data
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user');
+    // Navigate to login page
+    navigate('/login');
   };
 
   return (
@@ -591,6 +601,39 @@ export default function DatabaseSettings({ onClose }) {
           }}
         >
           {loading ? 'Elaborazione...' : 'Salva Configurazione'}
+        </button>
+
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          style={{
+            width: '100%',
+            marginTop: '16px',
+            padding: '16px',
+            background: 'white',
+            color: '#e53e3e',
+            border: '2px solid #e53e3e',
+            borderRadius: '12px',
+            fontSize: '16px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'all 0.3s',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = '#e53e3e';
+            e.target.style.color = 'white';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = 'white';
+            e.target.style.color = '#e53e3e';
+          }}
+        >
+          <LogOut size={20} />
+          Esci dal Account
         </button>
       </div>
     </div>

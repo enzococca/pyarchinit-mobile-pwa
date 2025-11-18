@@ -32,6 +32,19 @@ pyArchInit Mobile PWA provides archaeologists with a modern mobile interface for
 - EXIF metadata extraction (GPS, date, camera model)
 - Entity-based organization (US, Tomba, Material)
 - Direct integration with pyArchInit media_table
+- Gallery view with filtering and search capabilities
+
+**🎨 3D Model & AR Support**
+- Three.js-based 3D model viewer (GLB/GLTF formats)
+- Interactive controls (rotate, zoom, pan)
+- iOS AR Quick Look support for native AR viewing (USDZ format)
+- Automatic model centering and scaling
+
+**📚 Tropy Integration**
+- Export photos to Tropy JSON format for research annotation
+- Import annotated photos back from Tropy with preserved notes
+- Site-based filtering for targeted exports
+- Metadata mapping between PyArchInit and Tropy formats
 
 **⚡ Offline-First Architecture**
 - Full functionality without internet connection
@@ -182,9 +195,11 @@ ngrok http 5173
 **Frontend:**
 - React 18 with Hooks
 - Vite for build tooling
+- Three.js for 3D model rendering
 - IndexedDB (idb) for offline storage
 - Web Audio API for recording
 - MediaDevices API for camera
+- Lucide React for icons
 
 **Backend:**
 - FastAPI (Python)
@@ -221,6 +236,9 @@ PostgreSQL (PyArchInit)
 **Frontend (`frontend/src/`):**
 - `components/AudioRecorder.jsx` - Voice recording with pause/resume
 - `components/PhotoCapture.jsx` - Camera access and gallery upload
+- `components/MediaGallery.jsx` - Photo gallery with filtering and 3D viewer integration
+- `components/ModelViewer.jsx` - Three.js-based 3D model viewer with OrbitControls
+- `components/TropyIntegration.jsx` - Tropy export/import UI
 - `components/NotePreview.jsx` - AI interpretation preview and validation
 - `components/RapportiEditor.jsx` - Stratigraphic relationships editor
 - `services/offlineStorage.js` - IndexedDB abstraction layer
@@ -231,6 +249,10 @@ PostgreSQL (PyArchInit)
 - `services/image_processor.py` - Image resizing and EXIF extraction
 - `services/ai_processor.py` - Whisper + Claude integration
 - `models/database.py` - SQLAlchemy models for PyArchInit schema
+- `routes/media.py` - Media upload, download, and management endpoints
+- `routes/tropy.py` - Tropy export/import endpoints
+- `routes/auth.py` - JWT authentication
+- `routes/database.py` - Database operations (US, sites, etc.)
 
 ## 📱 Usage
 
@@ -263,6 +285,32 @@ PostgreSQL (PyArchInit)
 3. Capture photo or upload from gallery
 4. Add description and tags
 5. Save - images are automatically processed into 3 versions
+
+### Viewing 3D Models
+
+1. Upload 3D models in GLB or GLTF format
+2. View in interactive 3D viewer with:
+   - Left click + drag to rotate
+   - Right click + drag to pan
+   - Scroll to zoom
+3. **iOS users**: Tap "View in AR" to see models in augmented reality (requires USDZ format)
+
+### Using Tropy Integration
+
+**Export photos to Tropy:**
+1. Go to Media Gallery
+2. Click "Tropy Integration"
+3. Select site filter (optional)
+4. Click "Export to Tropy"
+5. Open downloaded JSON file in Tropy desktop app
+
+**Import annotated photos back:**
+1. Annotate photos in Tropy with notes, tags, metadata
+2. Save Tropy project as JSON
+3. In PWA, go to Tropy Integration
+4. Click "Import from Tropy"
+5. Select your Tropy JSON file
+6. Notes are merged back into photo descriptions
 
 ### Offline Operation
 
