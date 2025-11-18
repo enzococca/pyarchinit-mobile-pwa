@@ -52,6 +52,17 @@ export default defineConfig({
       }
     })
   ],
+  build: {
+    // Force new build hash to break Vercel cache (2025-01-18)
+    rollupOptions: {
+      output: {
+        // Use timestamp-based hashing to ensure new chunks on every build
+        entryFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
+        chunkFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
+        assetFileNames: `assets/[name]-[hash]-${Date.now()}.[ext]`
+      }
+    }
+  },
   server: {
     port: 5173,
     host: true,
