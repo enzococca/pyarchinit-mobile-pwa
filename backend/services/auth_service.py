@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from backend.config import settings
 from backend.models.auth import User, Project, ProjectCollaborator, ProjectRole
-from backend.services.db_manager import get_db, create_user_database, get_db_mode
+from backend.services.db_manager import get_auth_db, create_user_database, get_db_mode
 
 
 # Password hashing configuration
@@ -147,16 +147,25 @@ class AuthService:
                 detail="Email already registered"
             )
 
+        # Check if this is the first user (becomes admin automatically)
+        user_count = db.query(User).count()
+        is_first_user = (user_count == 0)
+
         # Create user
         hashed_password = AuthService.hash_password(password)
         user = User(
             email=email,
             password_hash=hashed_password,
-            name=name
+            name=name,
+            role="admin" if is_first_user else "archaeologist",
+            approval_status="approved" if is_first_user else "pending"
         )
         db.add(user)
         db.commit()
         db.refresh(user)
+
+        if is_first_user:
+            print(f"🎉 First user registered! Auto-assigned admin role: {user.email}")
 
         # Handle database mode-specific setup
         db_mode = get_db_mode()

@@ -1,5 +1,12 @@
 """
 Automatic database migrations - runs on application startup
+
+IMPORTANT: This now handles TWO separate databases:
+1. Auth Database (auth.db) - User accounts, webapp-level authentication
+2. PyArchInit Database - Archaeological data (SQLite or PostgreSQL)
+
+The auth database and PyArchInit database are completely separate and
+require separate migration logic.
 """
 
 from sqlalchemy import create_engine, text, inspect
@@ -66,19 +73,25 @@ def add_column_if_missing(engine, table_name: str, column_name: str, column_def:
         raise
 
 
-def migrate_users_table(engine):
+def migrate_auth_database(auth_engine):
     """
-    Migrate users table to add missing columns
+    Migrate auth database tables (users, user_databases, etc.)
+
+    The auth database is webapp-level and completely separate from
+    PyArchInit archaeological data.
+
+    Args:
+        auth_engine: SQLAlchemy engine for auth database (always SQLite)
     """
-    logger.info("Checking users table for missing columns...")
+    logger.info("🔐 Checking auth database for missing columns...")
 
     # Check if users table exists
-    inspector = inspect(engine)
+    inspector = inspect(auth_engine)
     if 'users' not in inspector.get_table_names():
-        logger.info("Users table doesn't exist yet, skipping migration")
+        logger.info("Users table doesn't exist yet, skipping auth migration")
         return
 
-    # Add missing columns
+    # Add missing columns to users table
     columns_to_add = [
         ('approval_status', "VARCHAR(50) DEFAULT 'approved'"),
         ('db_mode', "VARCHAR(50) DEFAULT 'sqlite'"),
@@ -91,23 +104,60 @@ def migrate_users_table(engine):
     ]
 
     for column_name, column_def in columns_to_add:
-        add_column_if_missing(engine, 'users', column_name, column_def)
+        add_column_if_missing(auth_engine, 'users', column_name, column_def)
+
+    logger.info("✅ Auth database migration complete")
 
 
-def run_auto_migrations(engine):
+def migrate_pyarchinit_database(pyarchinit_engine):
     """
-    Run all automatic migrations
+    Migrate PyArchInit database tables (archaeological data)
+
+    This database contains only archaeological data (sites, US, media, etc.)
+    and NO user/auth tables.
+
+    Args:
+        pyarchinit_engine: SQLAlchemy engine for PyArchInit database
+    """
+    logger.info("🏛️  Checking PyArchInit database for missing columns...")
+
+    # Currently, no PyArchInit table migrations needed
+    # Add future PyArchInit-specific migrations here
+
+    logger.info("✅ PyArchInit database migration complete")
+
+
+def run_auto_migrations(auth_engine=None, pyarchinit_engine=None):
+    """
+    Run all automatic migrations for BOTH databases
 
     This function is called on application startup and automatically
-    adds any missing columns to existing tables.
+    adds any missing columns to existing tables in both databases.
+
+    Args:
+        auth_engine: SQLAlchemy engine for auth database (optional)
+        pyarchinit_engine: SQLAlchemy engine for PyArchInit database (optional)
     """
-    logger.info("Running automatic database migrations...")
+    logger.info("=" * 60)
+    logger.info("🔧 Running automatic database migrations...")
+    logger.info("=" * 60)
 
     try:
-        # Migrate users table
-        migrate_users_table(engine)
+        # Migrate auth database (users, user_databases, etc.)
+        if auth_engine:
+            migrate_auth_database(auth_engine)
+        else:
+            logger.warning("⚠️  Auth engine not provided, skipping auth migrations")
 
-        logger.info("✅ Automatic migrations completed successfully")
+        # Migrate PyArchInit database (archaeological data)
+        if pyarchinit_engine:
+            migrate_pyarchinit_database(pyarchinit_engine)
+        else:
+            logger.warning("⚠️  PyArchInit engine not provided, skipping PyArchInit migrations")
+
+        logger.info("=" * 60)
+        logger.info("✅ All automatic migrations completed successfully")
+        logger.info("=" * 60)
 
     except Exception as e:
         logger.error(f"❌ Automatic migrations failed: {e}")

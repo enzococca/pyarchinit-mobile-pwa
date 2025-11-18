@@ -1,6 +1,9 @@
 """
 Authentication API Routes
 
+IMPORTANT: These endpoints use the SEPARATE AUTH DATABASE (auth.db),
+NOT the PyArchInit archaeological data database!
+
 Endpoints:
 - POST /api/auth/register - Register new user
 - POST /api/auth/login - Login user
@@ -13,7 +16,7 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
 from backend.services.auth_service import AuthService, get_current_user
-from backend.services.db_manager import get_db, get_db_mode
+from backend.services.db_manager import get_auth_db, get_db_mode
 from backend.models.auth import User
 
 
@@ -75,11 +78,12 @@ class LoginResponse(BaseModel):
 @router.post("/register")
 async def register(
     request: RegisterRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_auth_db)
 ):
     """
     Register new user
 
+    - Uses SEPARATE AUTH DATABASE (auth.db)
     - Creates user account with 'pending' approval status
     - Account must be approved by admin before login
     - In separate mode: Creates dedicated database (after approval)
@@ -131,11 +135,12 @@ async def register(
 @router.post("/login", response_model=LoginResponse)
 async def login(
     request: LoginRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_auth_db)
 ):
     """
     Login user
 
+    - Uses SEPARATE AUTH DATABASE (auth.db)
     - Verifies credentials
     - Returns access token
     """

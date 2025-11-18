@@ -42,23 +42,62 @@ class ConfirmNoteRequest(BaseModel):
     target_table: str
     force_action: Optional[str] = None  # 'merge' or 'overwrite'
 
-# Initialize database (create tables if using SQLite)
-if settings.USE_SQLITE:
-    init_db()
-    # Also initialize auth tables
-    from backend.init_auth_tables import init_auth_tables
-    init_auth_tables()
+# ============================================================================
+# DATABASE INITIALIZATION (TWO SEPARATE DATABASES)
+# ============================================================================
+# 1. Auth Database (ALWAYS SQLite) - User accounts, webapp-level auth
+# 2. PyArchInit Database (SQLite or PostgreSQL) - Archaeological data
+# ============================================================================
 
-# Run automatic migrations (add missing columns to existing tables)
+print("=" * 60)
+print("🗄️  Initializing databases...")
+print("=" * 60)
+
+# 1. Initialize Auth Database (ALWAYS runs, even in PostgreSQL mode)
 try:
-    from backend.migrations.auto_migrate import run_auto_migrations
-    from backend.services.db_manager import get_engine
-
-    engine = get_engine()
-    run_auto_migrations(engine)
+    from backend.init_auth_tables import init_auth_tables
+    print("📝 Initializing auth database...")
+    init_auth_tables()
+    print("✅ Auth database initialized")
 except Exception as e:
     import logging
-    logging.warning(f"Auto-migration warning: {e}")
+    logging.error(f"❌ Auth database initialization failed: {e}")
+    raise
+
+# 2. Initialize PyArchInit Database (only if SQLite mode)
+if settings.USE_SQLITE or settings.DB_MODE == "sqlite":
+    try:
+        print("📝 Initializing PyArchInit database (SQLite mode)...")
+        init_db()
+        print("✅ PyArchInit database initialized")
+    except Exception as e:
+        import logging
+        logging.error(f"❌ PyArchInit database initialization failed: {e}")
+        raise
+else:
+    print(f"ℹ️  PyArchInit database mode: {settings.DB_MODE} (PostgreSQL - tables should exist)")
+
+# 3. Run Automatic Migrations on BOTH databases
+try:
+    from backend.migrations.auto_migrate import run_auto_migrations
+    from backend.services.db_manager import get_auth_engine, get_engine
+
+    # Get both engines
+    auth_engine = get_auth_engine()
+    pyarchinit_engine = get_engine()
+
+    # Run migrations on both
+    run_auto_migrations(
+        auth_engine=auth_engine,
+        pyarchinit_engine=pyarchinit_engine
+    )
+except Exception as e:
+    import logging
+    logging.warning(f"⚠️  Auto-migration warning: {e}")
+
+print("=" * 60)
+print("✅ All databases initialized successfully")
+print("=" * 60)
 
 app = FastAPI(
     title="PyArchInit Mobile API",
