@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Database, Server, HardDrive, Upload, Download, Settings, Check, AlertCircle, LogOut } from 'lucide-react';
 
-export default function DatabaseSettings({ onClose }) {
-  const navigate = useNavigate();
+export default function DatabaseSettings({ onClose, onLogout }) {
   const [dbMode, setDbMode] = useState('sqlite'); // 'sqlite' | 'separate' | 'hybrid'
   const [currentMode, setCurrentMode] = useState(null);
   const [sqliteFile, setSqliteFile] = useState(null);
@@ -190,9 +188,12 @@ export default function DatabaseSettings({ onClose }) {
   const handleLogout = () => {
     // Clear authentication data
     localStorage.removeItem('auth_token');
-    localStorage.removeItem('user');
-    // Navigate to login page
-    navigate('/login');
+    localStorage.removeItem('user_name');
+    localStorage.removeItem('user_email');
+    localStorage.removeItem('user_role');
+    // Close settings and trigger logout in parent
+    if (onClose) onClose();
+    if (onLogout) onLogout();
   };
 
   return (

@@ -320,7 +320,10 @@ export default function App() {
 
       {/* Database Settings Modal */}
       {showDbSettings && (
-        <DatabaseSettings onClose={() => setShowDbSettings(false)} />
+        <DatabaseSettings
+          onClose={() => setShowDbSettings(false)}
+          onLogout={handleLogout}
+        />
       )}
 
       {/* Base Settings (always visible) */}
