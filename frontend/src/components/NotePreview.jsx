@@ -5,6 +5,7 @@ import RapportiEditor from './RapportiEditor';
 import { updateAudioNote } from '../services/offlineStorage';
 import { API_BASE } from '../config/api';
 
+// FIXED: Using centralized API_BASE from config/api.js (2025-01-18)
 function NotePreview({ note, onClose, onSave, onRefresh }) {
   const [editing, setEditing] = useState(false);
   const [processing, setProcessing] = useState(false);
