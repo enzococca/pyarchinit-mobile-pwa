@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Images, Video, Box, Download, X, Filter, RefreshCw, Maximize2 } from 'lucide-react';
+import { Images, Video, Box, Download, X, Filter, RefreshCw, Maximize2, Edit3 } from 'lucide-react';
 import ModelViewer from './ModelViewer';
+import ImageAnnotator from './ImageAnnotator';
 
 /**
  * Media card component with hover states
@@ -227,6 +228,7 @@ export default function MediaGallery() {
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [viewing3DModel, setViewing3DModel] = useState(null);
   const [isIOS, setIsIOS] = useState(false);
+  const [showAnnotator, setShowAnnotator] = useState(false);
 
   useEffect(() => {
     // Detect iOS device
@@ -744,6 +746,37 @@ export default function MediaGallery() {
                 selectedMedia={selectedMedia}
                 downloadMedia={downloadMedia}
               />
+
+              {/* Annotate Button (only for images) */}
+              {selectedMedia.media_type === 'image' && (
+                <button
+                  onClick={() => {
+                    setShowAnnotator(true);
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#059669'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = '#10b981'}
+                  style={{
+                    width: '100%',
+                    background: '#10b981',
+                    color: 'white',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    fontWeight: '600',
+                    fontSize: '15px',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
+                  }}
+                >
+                  <Edit3 size={18} />
+                  Annota Immagine
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -786,6 +819,15 @@ export default function MediaGallery() {
         <ModelViewer
           modelUrl={viewing3DModel}
           onClose={() => setViewing3DModel(null)}
+        />
+      )}
+
+      {/* Image Annotator */}
+      {showAnnotator && selectedMedia && selectedMedia.media_type === 'image' && (
+        <ImageAnnotator
+          mediaId={selectedMedia.id_media}
+          imageSrc={`${import.meta.env.VITE_API_URL}/api/media/download/${selectedMedia.id_media}/original`}
+          onClose={() => setShowAnnotator(false)}
         />
       )}
     </div>

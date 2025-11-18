@@ -109,6 +109,31 @@ def migrate_auth_database(auth_engine):
     logger.info("✅ Auth database migration complete")
 
 
+def create_table_if_missing(engine, table_name: str, create_sql: str):
+    """
+    Create a table if it doesn't exist
+
+    Args:
+        engine: SQLAlchemy engine
+        table_name: Name of the table
+        create_sql: SQL CREATE TABLE statement
+    """
+    inspector = inspect(engine)
+
+    if table_name in inspector.get_table_names():
+        logger.info(f"Table {table_name} already exists")
+        return
+
+    try:
+        with engine.connect() as conn:
+            conn.execute(text(create_sql))
+            conn.commit()
+            logger.info(f"✅ Created table {table_name}")
+    except Exception as e:
+        logger.error(f"❌ Failed to create table {table_name}: {e}")
+        raise
+
+
 def migrate_pyarchinit_database(pyarchinit_engine):
     """
     Migrate PyArchInit database tables (archaeological data)
@@ -121,8 +146,27 @@ def migrate_pyarchinit_database(pyarchinit_engine):
     """
     logger.info("🏛️  Checking PyArchInit database for missing columns...")
 
-    # Currently, no PyArchInit table migrations needed
-    # Add future PyArchInit-specific migrations here
+    # Create image_annotations table for Tropy-style annotations
+    create_table_if_missing(
+        pyarchinit_engine,
+        'image_annotations',
+        """
+        CREATE TABLE image_annotations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            media_id INTEGER NOT NULL,
+            x REAL NOT NULL,
+            y REAL NOT NULL,
+            width REAL NOT NULL,
+            height REAL NOT NULL,
+            note TEXT,
+            color VARCHAR(20) DEFAULT '#ff0000',
+            user_id INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (media_id) REFERENCES media_table(id_media)
+        )
+        """
+    )
 
     logger.info("✅ PyArchInit database migration complete")
 

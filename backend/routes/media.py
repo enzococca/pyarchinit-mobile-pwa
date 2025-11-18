@@ -436,10 +436,36 @@ async def download_media(
         if not os.path.exists(filepath):
             raise HTTPException(status_code=404, detail="File not found on disk")
 
+        # Determine proper MIME type
+        filetype = media_record.filetype.lower() if media_record.filetype else ""
+        mediatype = media_record.mediatype.lower() if media_record.mediatype else ""
+
+        # Map to proper MIME types
+        mime_type_map = {
+            "gltf": "model/gltf+json",
+            "glb": "model/gltf-binary",
+            "usdz": "model/vnd.usdz+zip",
+            "obj": "model/obj",
+            "stl": "model/stl",
+            "ply": "model/ply",
+            "jpg": "image/jpeg",
+            "jpeg": "image/jpeg",
+            "png": "image/png",
+            "gif": "image/gif",
+            "webp": "image/webp",
+            "mp4": "video/mp4",
+            "webm": "video/webm",
+            "mov": "video/quicktime",
+            "avi": "video/x-msvideo"
+        }
+
+        # Try to get MIME type from extension, fallback to constructed type
+        mime_type = mime_type_map.get(filetype, f"{mediatype}/{filetype}") if filetype else "application/octet-stream"
+
         return FileResponse(
             path=filepath,
             filename=media_record.filename,
-            media_type=f"{media_record.mediatype}/{media_record.filetype}"
+            media_type=mime_type
         )
 
     except HTTPException:
