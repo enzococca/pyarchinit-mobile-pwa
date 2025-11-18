@@ -1,9 +1,16 @@
 #!/usr/bin/env python
 """
-Initialize authentication tables in SQLite database
-This is a simplified version of migrations for SQLite mode
+Initialize authentication tables in SEPARATE Auth Database
+
+IMPORTANT: This creates tables in the AUTH database (auth.db),
+NOT in the PyArchInit database!
+
+Auth Database Tables:
+- users: User accounts
+- user_databases: Maps users to their PyArchInit databases
+- projects: Archaeological projects
+- project_collaborators: Project access control
 """
-import sqlite3
 import sys
 import os
 from pathlib import Path
@@ -12,172 +19,38 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config import settings
+from backend.models.auth_base import AuthBase
+from backend.services.db_manager import get_auth_engine
+
 
 def init_auth_tables():
-    """Create auth tables in SQLite database"""
+    """
+    Create all auth tables in separate auth database using SQLAlchemy
 
-    # Use /tmp for Railway and other read-only filesystems
-    # Railway filesystem is read-only except /tmp
-    db_path = Path("/tmp/pyarchinit_db.sqlite")
+    This uses AuthBase.metadata to create all tables defined in models/auth.py:
+    - User
+    - Project
+    - ProjectCollaborator
+    - UserDatabase
+    """
+    print(f"Initializing auth database at: {settings.AUTH_DB_PATH}")
 
-    print(f"Initializing auth tables in: {db_path}")
+    # Ensure auth DB directory exists
+    auth_db_path = Path(settings.AUTH_DB_PATH)
+    auth_db_path.parent.mkdir(parents=True, exist_ok=True)
 
-    conn = sqlite3.connect(str(db_path))
-    cursor = conn.cursor()
+    # Get auth database engine
+    engine = get_auth_engine()
 
-    # Create users table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email VARCHAR(255) UNIQUE NOT NULL,
-            password_hash VARCHAR(255) NOT NULL,
-            name VARCHAR(255) NOT NULL,
-            role VARCHAR(50) DEFAULT 'archaeologist',
-            is_active BOOLEAN DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP
-        )
-    """)
+    # Import auth models to ensure they're registered with AuthBase
+    from backend.models import auth  # noqa: F401
 
-    # Create projects table (for hybrid mode, but also useful for sqlite)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS projects (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name VARCHAR(255) NOT NULL,
-            description TEXT,
-            owner_user_id INTEGER NOT NULL,
-            is_active BOOLEAN DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP,
-            FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE CASCADE
-        )
-    """)
+    # Create all tables defined with AuthBase
+    AuthBase.metadata.create_all(bind=engine)
 
-    # Create project_collaborators table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS project_collaborators (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            project_id INTEGER NOT NULL,
-            user_id INTEGER NOT NULL,
-            role VARCHAR(50) DEFAULT 'contributor',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-            UNIQUE(project_id, user_id)
-        )
-    """)
+    print(f"✓ Auth tables initialized successfully in: {settings.AUTH_DB_PATH}")
+    print(f"  Tables created: users, projects, project_collaborators, user_databases")
 
-    # Add project_id column to existing tables if they don't exist
-    try:
-        cursor.execute("ALTER TABLE site_table ADD COLUMN project_id INTEGER")
-        print("Added project_id to site_table")
-    except sqlite3.OperationalError as e:
-        if "duplicate column name" not in str(e).lower():
-            print(f"Note: {e}")
-
-    try:
-        cursor.execute("ALTER TABLE site_table ADD COLUMN created_by_user INTEGER")
-        print("Added created_by_user to site_table")
-    except sqlite3.OperationalError as e:
-        if "duplicate column name" not in str(e).lower():
-            print(f"Note: {e}")
-
-    try:
-        cursor.execute("ALTER TABLE us_table ADD COLUMN project_id INTEGER")
-        print("Added project_id to us_table")
-    except sqlite3.OperationalError as e:
-        if "duplicate column name" not in str(e).lower():
-            print(f"Note: {e}")
-
-    try:
-        cursor.execute("ALTER TABLE us_table ADD COLUMN created_by_user INTEGER")
-        print("Added created_by_user to us_table")
-    except sqlite3.OperationalError as e:
-        if "duplicate column name" not in str(e).lower():
-            print(f"Note: {e}")
-
-    try:
-        cursor.execute("ALTER TABLE media_table ADD COLUMN project_id INTEGER")
-        print("Added project_id to media_table")
-    except sqlite3.OperationalError as e:
-        if "duplicate column name" not in str(e).lower():
-            print(f"Note: {e}")
-
-    try:
-        cursor.execute("ALTER TABLE media_table ADD COLUMN created_by_user INTEGER")
-        print("Added created_by_user to media_table")
-    except sqlite3.OperationalError as e:
-        if "duplicate column name" not in str(e).lower():
-            print(f"Note: {e}")
-
-    try:
-        cursor.execute("ALTER TABLE mobile_notes ADD COLUMN project_id INTEGER")
-        print("Added project_id to mobile_notes")
-    except sqlite3.OperationalError as e:
-        if "duplicate column name" not in str(e).lower():
-            print(f"Note: {e}")
-
-    try:
-        cursor.execute("ALTER TABLE mobile_notes ADD COLUMN created_by_user INTEGER")
-        print("Added created_by_user to mobile_notes")
-    except sqlite3.OperationalError as e:
-        if "duplicate column name" not in str(e).lower():
-            print(f"Note: {e}")
-
-    # Add user database configuration columns
-    try:
-        cursor.execute("ALTER TABLE users ADD COLUMN db_mode VARCHAR(50) DEFAULT 'sqlite'")
-        print("Added db_mode to users")
-    except sqlite3.OperationalError as e:
-        if "duplicate column name" not in str(e).lower():
-            print(f"Note: {e}")
-
-    try:
-        cursor.execute("ALTER TABLE users ADD COLUMN sqlite_filename VARCHAR(255)")
-        print("Added sqlite_filename to users")
-    except sqlite3.OperationalError as e:
-        if "duplicate column name" not in str(e).lower():
-            print(f"Note: {e}")
-
-    try:
-        cursor.execute("ALTER TABLE users ADD COLUMN postgres_host VARCHAR(255)")
-        print("Added postgres_host to users")
-    except sqlite3.OperationalError as e:
-        if "duplicate column name" not in str(e).lower():
-            print(f"Note: {e}")
-
-    try:
-        cursor.execute("ALTER TABLE users ADD COLUMN postgres_port INTEGER")
-        print("Added postgres_port to users")
-    except sqlite3.OperationalError as e:
-        if "duplicate column name" not in str(e).lower():
-            print(f"Note: {e}")
-
-    try:
-        cursor.execute("ALTER TABLE users ADD COLUMN postgres_name VARCHAR(255)")
-        print("Added postgres_name to users")
-    except sqlite3.OperationalError as e:
-        if "duplicate column name" not in str(e).lower():
-            print(f"Note: {e}")
-
-    try:
-        cursor.execute("ALTER TABLE users ADD COLUMN postgres_user VARCHAR(255)")
-        print("Added postgres_user to users")
-    except sqlite3.OperationalError as e:
-        if "duplicate column name" not in str(e).lower():
-            print(f"Note: {e}")
-
-    try:
-        cursor.execute("ALTER TABLE users ADD COLUMN postgres_password_encrypted VARCHAR(512)")
-        print("Added postgres_password_encrypted to users")
-    except sqlite3.OperationalError as e:
-        if "duplicate column name" not in str(e).lower():
-            print(f"Note: {e}")
-
-    conn.commit()
-    conn.close()
-
-    print("✓ Auth tables initialized successfully!")
 
 if __name__ == "__main__":
     init_auth_tables()

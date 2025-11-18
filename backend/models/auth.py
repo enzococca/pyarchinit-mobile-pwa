@@ -1,8 +1,12 @@
 """
 Authentication Models - User Management for Multi-User Support
 
-Tables:
-- users: User accounts
+IMPORTANT: These models use AuthBase (separate auth database)
+NOT the PyArchInit database Base!
+
+Tables in Auth Database:
+- users: User accounts (webapp level)
+- user_databases: Maps users to their PyArchInit databases
 - projects: Archaeological projects (hybrid mode)
 - project_collaborators: Project access control (hybrid mode)
 """
@@ -14,7 +18,7 @@ from datetime import datetime
 import enum
 import os
 
-from backend.models.database import Base
+from backend.models.auth_base import AuthBase
 
 
 class UserRole(str, enum.Enum):
@@ -39,9 +43,12 @@ RoleColumn = String(50) if USE_SQLITE else Enum(UserRole)
 ProjectRoleColumn = String(50) if USE_SQLITE else Enum(ProjectRole)
 
 
-class User(Base):
+class User(AuthBase):
     """
-    User accounts with personal database configurations
+    User accounts (WebApp Level - Separate Auth Database)
+
+    Stored in auth database, NOT PyArchInit database.
+    First user to register becomes admin automatically.
 
     Each user can choose their database mode:
     - sqlite: Personal SQLite database (upload/download)
@@ -89,10 +96,11 @@ class User(Base):
         return f"<User(id={self.id}, email='{self.email}', name='{self.name}', role='{self.role}')>"
 
 
-class Project(Base):
+class Project(AuthBase):
     """
     Archaeological projects (hybrid mode only)
 
+    Stored in auth database for project management.
     In separate mode: Not used (each user has own DB)
     In hybrid mode: Defines data boundaries for RLS
     """
@@ -115,10 +123,11 @@ class Project(Base):
         return f"<Project(id={self.id}, name='{self.name}', owner_id={self.owner_user_id})>"
 
 
-class ProjectCollaborator(Base):
+class ProjectCollaborator(AuthBase):
     """
     Project access control (hybrid mode only)
 
+    Stored in auth database.
     Defines who can access which projects and with what permissions
     """
     __tablename__ = "project_collaborators"
@@ -136,3 +145,48 @@ class ProjectCollaborator(Base):
 
     def __repr__(self):
         return f"<ProjectCollaborator(project_id={self.project_id}, user_id={self.user_id}, role={self.role})>"
+
+
+class UserDatabase(AuthBase):
+    """
+    Maps users to their PyArchInit databases (WebApp Level - Auth Database)
+
+    This table lives in the auth database and tracks which PyArchInit databases
+    each user has access to. A user can have multiple databases for different
+    archaeological projects.
+
+    Examples:
+    - User 1 → personal SQLite database (uploaded/downloaded)
+    - User 2 → PostgreSQL database "excavation_pompeii"
+    - User 3 → Multiple databases for different projects
+    """
+    __tablename__ = "user_databases"
+    __table_args__ = {'extend_existing': True}
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+
+    # Database identification
+    db_name = Column(String(255), nullable=False)  # Friendly name (e.g., "My Excavation", "Pompeii 2024")
+    db_type = Column(String(50), nullable=False)  # "sqlite" | "postgres"
+
+    # Database connection details
+    # For SQLite: Only sqlite_path is used
+    # For PostgreSQL: host, port, database, user, password are used
+    sqlite_path = Column(String(500), nullable=True)  # Path to SQLite file
+    pg_host = Column(String(255), nullable=True)
+    pg_port = Column(Integer, nullable=True)
+    pg_database = Column(String(255), nullable=True)
+    pg_user = Column(String(255), nullable=True)
+    pg_password = Column(String(255), nullable=True)  # Should be encrypted
+
+    # Flags
+    is_active = Column(Boolean, default=True)  # Can be deactivated without deletion
+    is_default = Column(Boolean, default=False)  # Default database for this user
+
+    # Metadata
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_used_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    def __repr__(self):
+        return f"<UserDatabase(id={self.id}, user_id={self.user_id}, db_name='{self.db_name}', db_type='{self.db_type}')>"

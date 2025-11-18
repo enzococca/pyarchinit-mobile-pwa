@@ -3,6 +3,17 @@ from pathlib import Path
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
+    # ==========================================
+    # AUTHENTICATION DATABASE (WebApp Level)
+    # ==========================================
+    # Auth database is ALWAYS separate from PyArchInit data
+    # Stores: users, sessions, user_databases (connection mappings)
+    # Default: SQLite at /data/auth.db (Railway) or ./auth.db (local)
+    AUTH_DB_PATH: str = os.getenv("AUTH_DB_PATH", "/data/auth.db")
+
+    # ==========================================
+    # PYARCHINIT DATABASE (Archaeological Data)
+    # ==========================================
     # Database Mode Selection
     # Options: "separate" | "hybrid" | "sqlite"
     # Default to SQLite for mobile-first offline capability

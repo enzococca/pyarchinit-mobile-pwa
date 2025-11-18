@@ -312,3 +312,77 @@ def drop_user_database(user_id: int) -> bool:
 def get_db_mode() -> str:
     """Get current database mode"""
     return db_manager.mode
+
+
+# ============================================================================
+# AUTH DATABASE (Separate from PyArchInit Data)
+# ============================================================================
+# Auth database is ALWAYS SQLite and stores users, sessions, user_databases
+
+
+def get_auth_engine():
+    """
+    Get SQLAlchemy engine for auth database (ALWAYS SQLite)
+
+    Returns:
+        SQLAlchemy Engine for auth database
+    """
+    # Cache auth engine as singleton
+    if not hasattr(get_auth_engine, '_auth_engine'):
+        auth_db_url = f"sqlite:///{settings.AUTH_DB_PATH}"
+
+        get_auth_engine._auth_engine = create_engine(
+            auth_db_url,
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+            echo=False
+        )
+
+    return get_auth_engine._auth_engine
+
+
+def get_auth_session() -> Session:
+    """
+    Get database session for auth database
+
+    Returns:
+        SQLAlchemy Session for auth database
+    """
+    engine = get_auth_engine()
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    return SessionLocal()
+
+
+def get_auth_db() -> Generator[Session, None, None]:
+    """
+    FastAPI dependency to get auth database session
+
+    This is used for all authentication operations (login, register, etc.)
+    and is completely separate from PyArchInit data database.
+
+    Usage:
+        @app.post("/api/auth/register")
+        def register(db: Session = Depends(get_auth_db)):
+            # db is now connected to auth database
+            user = User(email=..., password_hash=...)
+            db.add(user)
+            db.commit()
+
+    Yields:
+        Auth database session
+    """
+    session = get_auth_session()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+def get_engine(user_id: Optional[int] = None):
+    """
+    DEPRECATED: Use db_manager.get_engine() directly for PyArchInit database.
+    This function is kept for backward compatibility.
+
+    For auth database, use get_auth_engine() instead.
+    """
+    return db_manager.get_engine(user_id)
