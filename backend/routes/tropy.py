@@ -20,13 +20,13 @@ from datetime import datetime
 from backend.services.auth_service import get_current_user
 from backend.services.db_manager import get_db
 from backend.models.auth import User
-from backend.models.database import MediaTable
+from backend.models.database import Media
 
 
 router = APIRouter(prefix="/api/media", tags=["tropy"])
 
 
-def convert_media_to_tropy_item(media: MediaTable, base_url: str) -> dict:
+def convert_media_to_tropy_item(media: Media, base_url: str) -> dict:
     """
     Convert PyArchInit media item to Tropy format
 
@@ -112,13 +112,13 @@ async def export_tropy(
     """
     try:
         # Query media items
-        query = db.query(MediaTable).filter(
-            MediaTable.media_type == 'image'
+        query = db.query(Media).filter(
+            Media.media_type == 'image'
         )
 
         # Filter by site if provided
         if site:
-            query = query.filter(MediaTable.sito == site)
+            query = query.filter(Media.sito == site)
 
         # Get media items
         media_items = query.all()
@@ -236,8 +236,8 @@ async def import_tropy(
                 continue
 
             # Find existing media in database
-            media = db.query(MediaTable).filter(
-                MediaTable.id_media == int(id_media)
+            media = db.query(Media).filter(
+                Media.id_media == int(id_media)
             ).first()
 
             if not media:
