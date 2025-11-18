@@ -6,6 +6,7 @@ import DatabaseSettings from './components/DatabaseSettings';
 import NotePreview from './components/NotePreview';
 import TropyIntegration from './components/TropyIntegration';
 import Scan3DCapture from './components/Scan3DCapture';
+import AdminPanel from './components/AdminPanel';
 import Login from './components/Login';
 import Register from './components/Register';
 import {
@@ -53,10 +54,11 @@ export default function App() {
     const token = localStorage.getItem('auth_token');
     const userName = localStorage.getItem('user_name');
     const userEmail = localStorage.getItem('user_email');
+    const userRole = localStorage.getItem('user_role');
 
     if (token) {
       setIsAuthenticated(true);
-      setCurrentUser({ name: userName, email: userEmail });
+      setCurrentUser({ name: userName, email: userEmail, role: userRole });
       setRecordedBy(userName || '');
     }
 
@@ -390,6 +392,11 @@ export default function App() {
             <button onClick={() => setCurrentView('3dscan')}>
               🎨 3D Scan Upload
             </button>
+            {currentUser?.role === 'admin' && (
+              <button onClick={() => setCurrentView('admin')}>
+                👥 User Management
+              </button>
+            )}
             <button onClick={handleSync} disabled={!online || syncStats.total === 0}>
               🔄 Sync ({syncStats.total})
             </button>
@@ -448,6 +455,16 @@ export default function App() {
           </button>
 
           <Scan3DCapture sito={sito} />
+        </div>
+      )}
+
+      {/* Admin Panel (Admin Only) */}
+      {currentView === 'admin' && currentUser?.role === 'admin' && (
+        <div className="view-panel">
+          <button onClick={() => setCurrentView('home')} className="btn-back">
+            ← Back
+          </button>
+          <AdminPanel />
         </div>
       )}
 

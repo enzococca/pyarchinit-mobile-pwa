@@ -1,455 +1,497 @@
-import { useState, useEffect } from 'react';
-import { Users, Shield, CheckCircle, XCircle, Search } from 'lucide-react';
-import { API_BASE } from '../config/api';
+import React, { useState, useEffect } from 'react';
+import { Users, CheckCircle, XCircle, Shield, Clock, Mail, User } from 'lucide-react';
 
-export default function AdminPanel({ onClose }) {
+/**
+ * AdminPanel - Pannello di amministrazione per gestire utenti
+ *
+ * Funzionalità:
+ * - Visualizza tutti gli utenti registrati
+ * - Approva/Rifiuta utenti in stato "pending"
+ * - Mostra statistiche utenti
+ */
+export default function AdminPanel() {
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRole, setSelectedRole] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedApproval, setSelectedApproval] = useState('all');
-  const [updating, setUpdating] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [stats, setStats] = useState({ pending: 0, approved: 0, total: 0 });
 
   useEffect(() => {
-    fetchUsers();
+    loadUsers();
   }, []);
 
-  const fetchUsers = async () => {
+  const loadUsers = async () => {
     try {
+      setLoading(true);
+      setError(null);
+
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE}/api/admin/users`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/admin/users`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data.users);
-      } else {
-        alert('Error loading users');
+      if (!response.ok) {
+        throw new Error('Errore nel caricamento degli utenti');
       }
-    } catch (error) {
-      alert(`Error: ${error.message}`);
+
+      const data = await response.json();
+      setUsers(data.users || []);
+
+      // Calculate stats
+      const pending = data.users.filter(u => u.approval_status === 'pending').length;
+      const approved = data.users.filter(u => u.approval_status === 'approved').length;
+      setStats({
+        pending,
+        approved,
+        total: data.users.length
+      });
+
+    } catch (err) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleToggleActive = async (userId, currentStatus) => {
-    setUpdating(userId);
+  const approveUser = async (userId) => {
     try {
+      setLoading(true);
+      setError(null);
+      setSuccess(null);
+
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE}/api/admin/users/${userId}/toggle-active`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/admin/users/approve`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ is_active: !currentStatus })
+        body: JSON.stringify({ user_id: userId })
       });
 
-      if (response.ok) {
-        await fetchUsers();
-        alert(`User ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
-      } else {
-        const error = await response.json();
-        alert(`Error: ${error.detail}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Errore nell\'approvazione');
       }
-    } catch (error) {
-      alert(`Error: ${error.message}`);
+
+      setSuccess('Utente approvato con successo!');
+      await loadUsers();
+
+    } catch (err) {
+      setError(err.message);
     } finally {
-      setUpdating(null);
+      setLoading(false);
     }
   };
 
-  const handleChangeRole = async (userId, newRole) => {
-    setUpdating(userId);
+  const rejectUser = async (userId) => {
+    if (!confirm('Sei sicuro di voler rifiutare questo utente?')) {
+      return;
+    }
+
     try {
+      setLoading(true);
+      setError(null);
+      setSuccess(null);
+
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE}/api/admin/users/${userId}/role`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/admin/users/reject`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ role: newRole })
+        body: JSON.stringify({ user_id: userId })
       });
 
-      if (response.ok) {
-        await fetchUsers();
-        alert('User role updated successfully');
-      } else {
-        const error = await response.json();
-        alert(`Error: ${error.detail}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Errore nel rifiuto');
       }
-    } catch (error) {
-      alert(`Error: ${error.message}`);
+
+      setSuccess('Utente rifiutato');
+      await loadUsers();
+
+    } catch (err) {
+      setError(err.message);
     } finally {
-      setUpdating(null);
+      setLoading(false);
     }
   };
 
-  const handleApproveUser = async (userId) => {
-    setUpdating(userId);
-    try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE}/api/admin/users/${userId}/approve`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        await fetchUsers();
-        alert('User approved successfully');
-      } else {
-        const error = await response.json();
-        alert(`Error: ${error.detail}`);
+  const getStatusBadge = (status) => {
+    const styles = {
+      pending: {
+        bg: '#fef3c7',
+        color: '#92400e',
+        icon: Clock,
+        text: 'In attesa'
+      },
+      approved: {
+        bg: '#d1fae5',
+        color: '#065f46',
+        icon: CheckCircle,
+        text: 'Approvato'
+      },
+      rejected: {
+        bg: '#fee2e2',
+        color: '#991b1b',
+        icon: XCircle,
+        text: 'Rifiutato'
       }
-    } catch (error) {
-      alert(`Error: ${error.message}`);
-    } finally {
-      setUpdating(null);
-    }
+    };
+
+    const config = styles[status] || styles.pending;
+    const Icon = config.icon;
+
+    return (
+      <span style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '6px 12px',
+        background: config.bg,
+        color: config.color,
+        borderRadius: '999px',
+        fontSize: '13px',
+        fontWeight: '600'
+      }}>
+        <Icon size={14} />
+        {config.text}
+      </span>
+    );
   };
 
-  const handleRejectUser = async (userId) => {
-    if (!confirm('Are you sure you want to reject this user?')) return;
-
-    setUpdating(userId);
-    try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${API_BASE}/api/admin/users/${userId}/reject`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        await fetchUsers();
-        alert('User rejected');
-      } else {
-        const error = await response.json();
-        alert(`Error: ${error.detail}`);
-      }
-    } catch (error) {
-      alert(`Error: ${error.message}`);
-    } finally {
-      setUpdating(null);
-    }
-  };
-
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = selectedRole === 'all' || user.role === selectedRole;
-    const matchesStatus = selectedStatus === 'all' ||
-                         (selectedStatus === 'active' && user.is_active) ||
-                         (selectedStatus === 'inactive' && !user.is_active);
-    const approvalStatus = user.approval_status || 'approved';
-    const matchesApproval = selectedApproval === 'all' || approvalStatus === selectedApproval;
-    return matchesSearch && matchesRole && matchesStatus && matchesApproval;
-  });
-
-  const getRoleBadgeColor = (role) => {
-    switch (role) {
-      case 'admin': return '#e53e3e';
-      case 'archaeologist': return '#667eea';
-      case 'student': return '#48bb78';
-      case 'viewer': return '#718096';
-      default: return '#718096';
-    }
+  const getRoleBadge = (role) => {
+    const isAdmin = role === 'admin';
+    return (
+      <span style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '4px 10px',
+        background: isAdmin ? '#dbeafe' : '#f3f4f6',
+        color: isAdmin ? '#1e40af' : '#374151',
+        borderRadius: '6px',
+        fontSize: '12px',
+        fontWeight: '500'
+      }}>
+        {isAdmin && <Shield size={12} />}
+        {isAdmin ? 'Admin' : 'Utente'}
+      </span>
+    );
   };
 
   return (
     <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      zIndex: 1000,
-      overflowY: 'auto',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      padding: '20px'
+      padding: '24px',
+      maxWidth: '1200px',
+      margin: '0 auto'
     }}>
+      {/* Header */}
       <div style={{
-        maxWidth: '1200px',
-        margin: '0 auto',
-        background: 'white',
-        borderRadius: '20px',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-        padding: '30px'
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        borderRadius: '16px',
+        padding: '32px',
+        color: 'white',
+        marginBottom: '24px',
+        boxShadow: '0 10px 40px rgba(102, 126, 234, 0.3)'
       }}>
-        {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '30px', position: 'relative' }}>
-          {onClose && (
-            <button
-              onClick={onClose}
-              style={{
-                position: 'absolute',
-                top: 0,
-                right: 0,
-                background: 'white',
-                border: 'none',
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                cursor: 'pointer',
-                fontSize: '24px',
-                color: '#667eea',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-              }}
-            >
-              ✕
-            </button>
-          )}
-          <Shield size={48} style={{ color: '#667eea', marginBottom: '10px' }} />
-          <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: '#1a202c', marginBottom: '8px' }}>
-            Admin Panel
-          </h1>
-          <p style={{ color: '#718096' }}>
-            User Management & Authorization
-          </p>
-        </div>
-
-        {/* Filters */}
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 200px 200px',
-          gap: '12px',
-          marginBottom: '24px'
-        }}>
-          <div style={{ position: 'relative' }}>
-            <Search size={20} style={{
-              position: 'absolute',
-              left: '12px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: '#718096'
-            }} />
-            <input
-              type="text"
-              placeholder="Search users..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px 10px 10px 40px',
-                border: '2px solid #e2e8f0',
-                borderRadius: '8px',
-                fontSize: '14px'
-              }}
-            />
-          </div>
-
-          <select
-            value={selectedRole}
-            onChange={(e) => setSelectedRole(e.target.value)}
-            style={{
-              padding: '10px 14px',
-              border: '2px solid #e2e8f0',
-              borderRadius: '8px',
-              fontSize: '14px',
-              cursor: 'pointer'
-            }}
-          >
-            <option value="all">All Roles</option>
-            <option value="admin">Admin</option>
-            <option value="archaeologist">Archaeologist</option>
-            <option value="student">Student</option>
-            <option value="viewer">Viewer</option>
-          </select>
-
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            style={{
-              padding: '10px 14px',
-              border: '2px solid #e2e8f0',
-              borderRadius: '8px',
-              fontSize: '14px',
-              cursor: 'pointer'
-            }}
-          >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
-
-        {/* Stats */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          display: 'flex',
+          alignItems: 'center',
           gap: '16px',
-          marginBottom: '24px'
+          marginBottom: '16px'
         }}>
-          <div style={{
-            padding: '16px',
-            background: '#f7fafc',
-            borderRadius: '12px',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#667eea' }}>
-              {users.length}
+          <Shield size={32} />
+          <h1 style={{ margin: 0, fontSize: '28px', fontWeight: '700' }}>
+            Pannello Amministrazione
+          </h1>
+        </div>
+        <p style={{ margin: 0, opacity: 0.9, fontSize: '16px' }}>
+          Gestisci gli utenti e approva le richieste di registrazione
+        </p>
+      </div>
+
+      {/* Stats Cards */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: '16px',
+        marginBottom: '24px'
+      }}>
+        <div style={{
+          background: 'white',
+          borderRadius: '12px',
+          padding: '20px',
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+            <div style={{
+              background: '#fef3c7',
+              color: '#92400e',
+              padding: '8px',
+              borderRadius: '8px',
+              display: 'flex'
+            }}>
+              <Clock size={20} />
             </div>
-            <div style={{ fontSize: '14px', color: '#718096' }}>Total Users</div>
-          </div>
-          <div style={{
-            padding: '16px',
-            background: '#f7fafc',
-            borderRadius: '12px',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#48bb78' }}>
-              {users.filter(u => u.is_active).length}
+            <div>
+              <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827' }}>
+                {stats.pending}
+              </div>
+              <div style={{ fontSize: '13px', color: '#6b7280' }}>
+                In attesa
+              </div>
             </div>
-            <div style={{ fontSize: '14px', color: '#718096' }}>Active</div>
-          </div>
-          <div style={{
-            padding: '16px',
-            background: '#f7fafc',
-            borderRadius: '12px',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#e53e3e' }}>
-              {users.filter(u => !u.is_active).length}
-            </div>
-            <div style={{ fontSize: '14px', color: '#718096' }}>Inactive</div>
-          </div>
-          <div style={{
-            padding: '16px',
-            background: '#f7fafc',
-            borderRadius: '12px',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f56565' }}>
-              {users.filter(u => u.role === 'admin').length}
-            </div>
-            <div style={{ fontSize: '14px', color: '#718096' }}>Admins</div>
           </div>
         </div>
 
-        {/* Users Table */}
+        <div style={{
+          background: 'white',
+          borderRadius: '12px',
+          padding: '20px',
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+            <div style={{
+              background: '#d1fae5',
+              color: '#065f46',
+              padding: '8px',
+              borderRadius: '8px',
+              display: 'flex'
+            }}>
+              <CheckCircle size={20} />
+            </div>
+            <div>
+              <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827' }}>
+                {stats.approved}
+              </div>
+              <div style={{ fontSize: '13px', color: '#6b7280' }}>
+                Approvati
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{
+          background: 'white',
+          borderRadius: '12px',
+          padding: '20px',
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+            <div style={{
+              background: '#dbeafe',
+              color: '#1e40af',
+              padding: '8px',
+              borderRadius: '8px',
+              display: 'flex'
+            }}>
+              <Users size={20} />
+            </div>
+            <div>
+              <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827' }}>
+                {stats.total}
+              </div>
+              <div style={{ fontSize: '13px', color: '#6b7280' }}>
+                Totale utenti
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Messages */}
+      {error && (
+        <div style={{
+          background: '#fee2e2',
+          border: '1px solid #fecaca',
+          borderRadius: '12px',
+          padding: '16px',
+          marginBottom: '16px',
+          color: '#991b1b',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <XCircle size={20} />
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div style={{
+          background: '#d1fae5',
+          border: '1px solid #a7f3d0',
+          borderRadius: '12px',
+          padding: '16px',
+          marginBottom: '16px',
+          color: '#065f46',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <CheckCircle size={20} />
+          {success}
+        </div>
+      )}
+
+      {/* Users List */}
+      <div style={{
+        background: 'white',
+        borderRadius: '16px',
+        border: '1px solid #e5e7eb',
+        overflow: 'hidden',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+      }}>
+        <div style={{
+          padding: '20px 24px',
+          borderBottom: '1px solid #e5e7eb',
+          background: '#f9fafb'
+        }}>
+          <h2 style={{
+            margin: 0,
+            fontSize: '20px',
+            fontWeight: '600',
+            color: '#111827',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <Users size={24} />
+            Utenti Registrati
+          </h2>
+        </div>
+
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#718096' }}>
-            Loading users...
+          <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>
+            Caricamento...
+          </div>
+        ) : users.length === 0 ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>
+            Nessun utente registrato
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              background: 'white',
-              borderRadius: '12px',
-              overflow: 'hidden'
-            }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ background: '#f7fafc', borderBottom: '2px solid #e2e8f0' }}>
-                  <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#4a5568' }}>
-                    User
+                <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                  <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>
+                    Utente
                   </th>
-                  <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#4a5568' }}>
-                    Role
+                  <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>
+                    Email
                   </th>
-                  <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#4a5568' }}>
-                    Database
+                  <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>
+                    Ruolo
                   </th>
-                  <th style={{ padding: '12px', textAlign: 'center', fontSize: '14px', fontWeight: '600', color: '#4a5568' }}>
-                    Status
+                  <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>
+                    Stato
                   </th>
-                  <th style={{ padding: '12px', textAlign: 'right', fontSize: '14px', fontWeight: '600', color: '#4a5568' }}>
-                    Actions
+                  <th style={{ padding: '16px 24px', textAlign: 'right', fontSize: '13px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>
+                    Azioni
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map(user => (
-                  <tr key={user.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                    <td style={{ padding: '16px' }}>
-                      <div style={{ fontWeight: '600', color: '#2d3748' }}>{user.name}</div>
-                      <div style={{ fontSize: '14px', color: '#718096' }}>{user.email}</div>
-                    </td>
-                    <td style={{ padding: '16px' }}>
-                      <select
-                        value={user.role}
-                        onChange={(e) => handleChangeRole(user.id, e.target.value)}
-                        disabled={updating === user.id}
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: '6px',
-                          border: 'none',
-                          background: getRoleBadgeColor(user.role),
+                {users.map((user) => (
+                  <tr key={user.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                    <td style={{ padding: '20px 24px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                           color: 'white',
-                          fontSize: '13px',
                           fontWeight: '600',
-                          cursor: updating === user.id ? 'not-allowed' : 'pointer',
-                          opacity: updating === user.id ? 0.6 : 1
-                        }}
-                      >
-                        <option value="admin">Admin</option>
-                        <option value="archaeologist">Archaeologist</option>
-                        <option value="student">Student</option>
-                        <option value="viewer">Viewer</option>
-                      </select>
-                    </td>
-                    <td style={{ padding: '16px', fontSize: '14px', color: '#4a5568' }}>
-                      {user.db_mode || 'sqlite'}
-                    </td>
-                    <td style={{ padding: '16px', textAlign: 'center' }}>
-                      <div style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        padding: '4px 12px',
-                        borderRadius: '20px',
-                        background: user.is_active ? '#d4edda' : '#f8d7da',
-                        color: user.is_active ? '#155724' : '#721c24',
-                        fontSize: '12px',
-                        fontWeight: '600'
-                      }}>
-                        {user.is_active ? <CheckCircle size={14} /> : <XCircle size={14} />}
-                        {user.is_active ? 'Active' : 'Inactive'}
+                          fontSize: '16px'
+                        }}>
+                          {user.name?.[0]?.toUpperCase() || 'U'}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: '600', color: '#111827', fontSize: '15px' }}>
+                            {user.name}
+                          </div>
+                          <div style={{ fontSize: '13px', color: '#6b7280' }}>
+                            ID: {user.id}
+                          </div>
+                        </div>
                       </div>
                     </td>
-                    <td style={{ padding: '16px', textAlign: 'right' }}>
-                      <button
-                        onClick={() => handleToggleActive(user.id, user.is_active)}
-                        disabled={updating === user.id}
-                        style={{
-                          padding: '8px 16px',
-                          background: user.is_active ? '#f56565' : '#48bb78',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          fontSize: '13px',
-                          fontWeight: '600',
-                          cursor: updating === user.id ? 'not-allowed' : 'pointer',
-                          opacity: updating === user.id ? 0.6 : 1,
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        {updating === user.id ? 'Updating...' : (user.is_active ? 'Deactivate' : 'Activate')}
-                      </button>
+                    <td style={{ padding: '20px 24px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#374151', fontSize: '14px' }}>
+                        <Mail size={16} style={{ color: '#9ca3af' }} />
+                        {user.email}
+                      </div>
+                    </td>
+                    <td style={{ padding: '20px 24px' }}>
+                      {getRoleBadge(user.role)}
+                    </td>
+                    <td style={{ padding: '20px 24px' }}>
+                      {getStatusBadge(user.approval_status)}
+                    </td>
+                    <td style={{ padding: '20px 24px', textAlign: 'right' }}>
+                      {user.approval_status === 'pending' && (
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                          <button
+                            onClick={() => approveUser(user.id)}
+                            disabled={loading}
+                            style={{
+                              background: '#10b981',
+                              color: 'white',
+                              border: 'none',
+                              padding: '8px 16px',
+                              borderRadius: '8px',
+                              cursor: loading ? 'not-allowed' : 'pointer',
+                              fontSize: '14px',
+                              fontWeight: '600',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              opacity: loading ? 0.6 : 1
+                            }}
+                          >
+                            <CheckCircle size={16} />
+                            Approva
+                          </button>
+                          <button
+                            onClick={() => rejectUser(user.id)}
+                            disabled={loading}
+                            style={{
+                              background: '#ef4444',
+                              color: 'white',
+                              border: 'none',
+                              padding: '8px 16px',
+                              borderRadius: '8px',
+                              cursor: loading ? 'not-allowed' : 'pointer',
+                              fontSize: '14px',
+                              fontWeight: '600',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              opacity: loading ? 0.6 : 1
+                            }}
+                          >
+                            <XCircle size={16} />
+                            Rifiuta
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-
-            {filteredUsers.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#718096' }}>
-                No users found matching the filters
-              </div>
-            )}
           </div>
         )}
       </div>
