@@ -325,6 +325,27 @@ export default function ImageAnnotator({ mediaId, imageSrc, onClose }) {
         </button>
       </div>
 
+      {/* Instructions Banner */}
+      {annotations.length === 0 && !drawMode && (
+        <div style={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          padding: '16px 20px',
+          color: 'white',
+          textAlign: 'center',
+          borderBottom: '2px solid rgba(255,255,255,0.2)'
+        }}>
+          <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>
+            📝 Come annotare l'immagine
+          </div>
+          <div style={{ fontSize: '14px', opacity: 0.95, lineHeight: '1.5' }}>
+            1️⃣ Clicca su <strong>"✏️ Modalità Disegno"</strong> qui sotto<br/>
+            2️⃣ Disegna un rettangolo sull'area da annotare<br/>
+            3️⃣ Aggiungi una nota descrittiva<br/>
+            4️⃣ Clicca sulle annotazioni per vederle o modificarle
+          </div>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div style={{
         background: '#2d3748',
@@ -332,29 +353,37 @@ export default function ImageAnnotator({ mediaId, imageSrc, onClose }) {
         display: 'flex',
         gap: '12px',
         alignItems: 'center',
-        flexWrap: 'wrap'
+        flexWrap: 'wrap',
+        borderBottom: '1px solid #4a5568'
       }}>
         <button
           onClick={() => setDrawMode(!drawMode)}
           style={{
-            background: drawMode ? '#667eea' : '#4a5568',
+            background: drawMode ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#4a5568',
             color: 'white',
-            border: 'none',
-            padding: '8px 16px',
-            borderRadius: '6px',
+            border: drawMode ? '2px solid #fbbf24' : 'none',
+            padding: '10px 20px',
+            borderRadius: '8px',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            fontWeight: '500'
+            fontWeight: '600',
+            fontSize: '15px',
+            boxShadow: drawMode ? '0 4px 12px rgba(102, 126, 234, 0.4)' : 'none',
+            transition: 'all 0.3s'
           }}
         >
-          {drawMode ? <Square size={18} /> : <Plus size={18} />}
-          {drawMode ? 'Disegna (attivo)' : 'Nuova annotazione'}
+          {drawMode ? '✏️' : '➕'}
+          {drawMode ? ' Modalità Disegno ATTIVA' : ' Attiva Modalità Disegno'}
         </button>
 
-        <div style={{ color: '#a0aec0', fontSize: '14px' }}>
-          {drawMode ? 'Trascina per disegnare un rettangolo' : 'Clicca su un\'annotazione per modificarla'}
+        <div style={{
+          color: drawMode ? '#fbbf24' : '#a0aec0',
+          fontSize: '14px',
+          fontWeight: drawMode ? '600' : '400'
+        }}>
+          {drawMode ? '👆 Trascina sull\'immagine per disegnare un rettangolo' : 'Clicca su un\'annotazione per vederla/modificarla'}
         </div>
 
         <div style={{ marginLeft: 'auto', color: '#a0aec0', fontSize: '14px' }}>
@@ -383,10 +412,42 @@ export default function ImageAnnotator({ mediaId, imageSrc, onClose }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '20px'
+          padding: '20px',
+          position: 'relative'
         }}
       >
-        <div style={{ position: 'relative', display: 'inline-block' }}>
+        {/* Draw mode overlay indicator */}
+        {drawMode && (
+          <div style={{
+            position: 'absolute',
+            top: '40px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            padding: '12px 24px',
+            borderRadius: '999px',
+            fontWeight: '600',
+            fontSize: '16px',
+            boxShadow: '0 8px 24px rgba(102, 126, 234, 0.5)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            animation: 'pulse 2s ease-in-out infinite'
+          }}>
+            ✏️ Trascina per disegnare
+          </div>
+        )}
+
+        <div style={{
+          position: 'relative',
+          display: 'inline-block',
+          border: drawMode ? '3px solid #667eea' : 'none',
+          borderRadius: drawMode ? '8px' : '0',
+          boxShadow: drawMode ? '0 0 0 4px rgba(102, 126, 234, 0.2)' : 'none',
+          transition: 'all 0.3s'
+        }}>
           <img
             ref={imageRef}
             src={imageSrc}
@@ -395,7 +456,8 @@ export default function ImageAnnotator({ mediaId, imageSrc, onClose }) {
             style={{
               maxWidth: '100%',
               maxHeight: 'calc(100vh - 200px)',
-              display: 'block'
+              display: 'block',
+              borderRadius: drawMode ? '6px' : '0'
             }}
           />
           <canvas
@@ -413,7 +475,8 @@ export default function ImageAnnotator({ mediaId, imageSrc, onClose }) {
               top: 0,
               left: 0,
               cursor: drawMode ? 'crosshair' : 'pointer',
-              touchAction: 'none'
+              touchAction: 'none',
+              borderRadius: drawMode ? '6px' : '0'
             }}
           />
         </div>
