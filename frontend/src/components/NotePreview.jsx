@@ -6,6 +6,20 @@ import { updateAudioNote } from '../services/offlineStorage';
 import { API_BASE } from '../config/api';
 
 // FIXED: Using centralized API_BASE from config/api.js (2025-01-18)
+
+/**
+ * Get authorization headers for API requests
+ */
+function getAuthHeaders() {
+  const token = localStorage.getItem('auth_token');
+  if (!token) {
+    throw new Error('No authentication token found. Please log in again.');
+  }
+  return {
+    'Authorization': `Bearer ${token}`
+  };
+}
+
 function NotePreview({ note, onClose, onSave, onRefresh }) {
   const [editing, setEditing] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -56,6 +70,8 @@ function NotePreview({ note, onClose, onSave, onRefresh }) {
 
       const response = await axios.post(`${API_BASE}/notes/${note.id}/process`, {
         force_reprocess: true
+      }, {
+        headers: getAuthHeaders()
       });
 
       setProcessingStatus('🤖 Interpreting with Claude AI...');
@@ -160,7 +176,9 @@ function NotePreview({ note, onClose, onSave, onRefresh }) {
       console.log('[NotePreview] Request data prepared, sending to backend...');
       console.log('[NotePreview] Entity type:', safeEntityType, 'Target table:', safeTargetTable);
 
-      const response = await axios.post(`${API_BASE}/notes/${note.id}/confirm`, requestData);
+      const response = await axios.post(`${API_BASE}/notes/${note.id}/confirm`, requestData, {
+        headers: getAuthHeaders()
+      });
       console.log('[NotePreview] Backend response received successfully');
 
       // Mark note as saved to database in local storage
@@ -229,7 +247,9 @@ function NotePreview({ note, onClose, onSave, onRefresh }) {
     }
 
     try {
-      await axios.post(`${API_BASE}/notes/${note.id}/reject`);
+      await axios.post(`${API_BASE}/notes/${note.id}/reject`, {}, {
+        headers: getAuthHeaders()
+      });
       alert('Note rejected');
       onClose();
     } catch (error) {
