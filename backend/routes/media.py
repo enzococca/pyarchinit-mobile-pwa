@@ -423,22 +423,23 @@ async def download_media(
             thumb_record = media_processor.get_media_thumb_by_media_id(db, media_id)
             if not thumb_record:
                 raise HTTPException(status_code=404, detail="Thumbnail not found")
-            filepath = thumb_record.filepath
+            filepath = thumb_record['filepath']
         elif size == "resize":
             thumb_record = media_processor.get_media_thumb_by_media_id(db, media_id)
             if not thumb_record:
                 raise HTTPException(status_code=404, detail="Resized image not found")
-            filepath = thumb_record.path_resize
+            filepath = thumb_record['path_resize']
         else:  # original
-            filepath = media_record.filepath
+            filepath = media_record['filepath']
 
         # Check if file exists
         if not os.path.exists(filepath):
             raise HTTPException(status_code=404, detail="File not found on disk")
 
         # Determine proper MIME type
-        filetype = media_record.filetype.lower() if media_record.filetype else ""
-        mediatype = media_record.mediatype.lower() if media_record.mediatype else ""
+        # Access columns by name using dictionary-style access
+        filetype = media_record['filetype'].lower() if media_record['filetype'] else ""
+        mediatype = media_record['media_type'].lower() if media_record['media_type'] else ""
 
         # Map to proper MIME types
         mime_type_map = {
@@ -464,7 +465,7 @@ async def download_media(
 
         return FileResponse(
             path=filepath,
-            filename=media_record.filename,
+            filename=media_record['filename'],
             media_type=mime_type
         )
 
