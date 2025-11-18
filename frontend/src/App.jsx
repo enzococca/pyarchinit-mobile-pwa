@@ -4,6 +4,8 @@ import PhotoCapture from './components/PhotoCapture';
 import MediaCapture from './components/MediaCapture';
 import DatabaseSettings from './components/DatabaseSettings';
 import NotePreview from './components/NotePreview';
+import TropyIntegration from './components/TropyIntegration';
+import Scan3DCapture from './components/Scan3DCapture';
 import Login from './components/Login';
 import Register from './components/Register';
 import {
@@ -28,7 +30,7 @@ export default function App() {
   const [authView, setAuthView] = useState('login'); // 'login' | 'register'
   const [currentUser, setCurrentUser] = useState(null);
 
-  const [currentView, setCurrentView] = useState('home'); // 'home', 'audio', 'photo', 'notes', 'sync', 'media'
+  const [currentView, setCurrentView] = useState('home'); // 'home', 'audio', 'photo', 'notes', 'sync', 'media', 'tropy', '3dscan'
   const [sito, setSito] = useState('');
   const [recordedBy, setRecordedBy] = useState('');
   const [entityType, setEntityType] = useState('US');
@@ -382,6 +384,12 @@ export default function App() {
               🖼️ View Photos ({images.length})
             </button>
             */}
+            <button onClick={() => setCurrentView('tropy')}>
+              📚 Tropy Integration
+            </button>
+            <button onClick={() => setCurrentView('3dscan')}>
+              🎨 3D Scan Upload
+            </button>
             <button onClick={handleSync} disabled={!online || syncStats.total === 0}>
               🔄 Sync ({syncStats.total})
             </button>
@@ -418,6 +426,28 @@ export default function App() {
           </button>
 
           <MediaCapture />
+        </div>
+      )}
+
+      {/* Tropy Integration */}
+      {currentView === 'tropy' && (
+        <div className="view-panel">
+          <button onClick={() => setCurrentView('home')} className="btn-back">
+            ← Back
+          </button>
+
+          <TropyIntegration />
+        </div>
+      )}
+
+      {/* 3D Scan Upload */}
+      {currentView === '3dscan' && (
+        <div className="view-panel">
+          <button onClick={() => setCurrentView('home')} className="btn-back">
+            ← Back
+          </button>
+
+          <Scan3DCapture sito={sito} />
         </div>
       )}
 
