@@ -85,10 +85,10 @@ class User(AuthBase):
     owned_projects = relationship(
         "backend.models.auth.Project",
         back_populates="owner",
-        foreign_keys="backend.models.auth.Project.owner_user_id"
+        foreign_keys="backend.models.auth.Project.owner_id"
     )
-    project_collaborations = relationship(
-        "backend.models.auth.ProjectCollaborator",
+    project_memberships = relationship(
+        "backend.models.auth.ProjectTeam",
         back_populates="user"
     )
 
@@ -98,11 +98,10 @@ class User(AuthBase):
 
 class Project(AuthBase):
     """
-    Archaeological projects (hybrid mode only)
+    Archaeological projects - Multi-project support
 
     Stored in auth database for project management.
-    In separate mode: Not used (each user has own DB)
-    In hybrid mode: Defines data boundaries for RLS
+    Each project has its own database (SQLite or PostgreSQL).
     """
     __tablename__ = "projects"
     __table_args__ = {'extend_existing': True}
@@ -110,41 +109,48 @@ class Project(AuthBase):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
     description = Column(String, nullable=True)
-    owner_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    # Database configuration
+    db_mode = Column(String(20), nullable=False, default="sqlite")  # "sqlite" | "postgres" | "hybrid"
+    db_config = Column(String, nullable=False)  # JSON string with DB connection details
+    is_personal = Column(Boolean, default=False)  # Personal workspace vs shared project
+
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    owner = relationship("backend.models.auth.User", back_populates="owned_projects", foreign_keys=[owner_user_id])
-    collaborators = relationship("backend.models.auth.ProjectCollaborator", back_populates="project")
+    owner = relationship("backend.models.auth.User", back_populates="owned_projects", foreign_keys=[owner_id])
+    team_members = relationship("backend.models.auth.ProjectTeam", back_populates="project")
 
     def __repr__(self):
-        return f"<Project(id={self.id}, name='{self.name}', owner_id={self.owner_user_id})>"
+        return f"<Project(id={self.id}, name='{self.name}', owner_id={self.owner_id}, db_mode='{self.db_mode}')>"
 
 
-class ProjectCollaborator(AuthBase):
+class ProjectTeam(AuthBase):
     """
-    Project access control (hybrid mode only)
+    Project team members - Access control for multi-project system
 
     Stored in auth database.
-    Defines who can access which projects and with what permissions
+    Defines who can access which projects and with what permissions.
     """
-    __tablename__ = "project_collaborators"
+    __tablename__ = "project_teams"
     __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, index=True)
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    role = Column(ProjectRoleColumn, default="contributor")  # Use string default for SQLite compatibility
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    role = Column(String(20), default="member")  # "owner" | "admin" | "member" | "viewer"
+    permissions = Column(String, nullable=True)  # JSON string with granular permissions
+    joined_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
-    project = relationship("backend.models.auth.Project", back_populates="collaborators")
-    user = relationship("backend.models.auth.User", back_populates="project_collaborations")
+    project = relationship("backend.models.auth.Project", back_populates="team_members")
+    user = relationship("backend.models.auth.User", back_populates="project_memberships")
 
     def __repr__(self):
-        return f"<ProjectCollaborator(project_id={self.project_id}, user_id={self.user_id}, role={self.role})>"
+        return f"<ProjectTeam(project_id={self.project_id}, user_id={self.user_id}, role={self.role})>"
 
 
 class UserDatabase(AuthBase):

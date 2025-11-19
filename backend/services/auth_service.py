@@ -18,7 +18,7 @@ import jwt
 from sqlalchemy.orm import Session
 
 from backend.config import settings
-from backend.models.auth import User, Project, ProjectCollaborator, ProjectRole
+from backend.models.auth import User, Project, ProjectTeam, ProjectRole
 from backend.services.db_manager import get_auth_db, create_user_database, get_db_mode
 
 

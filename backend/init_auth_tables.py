@@ -49,7 +49,7 @@ def init_auth_tables():
     AuthBase.metadata.create_all(bind=engine)
 
     print(f"✓ Auth tables initialized successfully in: {settings.AUTH_DB_PATH}")
-    print(f"  Tables created: users, projects, project_collaborators, user_databases")
+    print(f"  Tables created: users, projects, project_teams, user_databases")
 
 
 if __name__ == "__main__":
