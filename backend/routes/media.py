@@ -367,7 +367,7 @@ async def get_my_media(
         query = text("""
             SELECT
                 m.id_media,
-                m.media_type,
+                m.mediatype,
                 m.filename,
                 m.filetype,
                 m.filepath,
