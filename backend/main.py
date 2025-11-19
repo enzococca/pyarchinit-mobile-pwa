@@ -22,7 +22,7 @@ from backend.services.ai_processor import ArchaeologicalAIInterpreter
 from backend.services.stratigraphic_utils import parse_relationships, format_relationships_for_db
 from backend.services.auth_service import get_current_user
 from backend.models.auth import User
-from backend.routes import auth, media, database, notes, tropy, annotations
+from backend.routes import auth, media, database, notes, tropy, annotations, projects
 
 
 # Pydantic models for API requests
@@ -124,6 +124,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth.router)
+app.include_router(projects.router)
 app.include_router(media.router)
 app.include_router(database.router)
 app.include_router(notes.router)

@@ -9,6 +9,9 @@ import Scan3DCapture from './components/Scan3DCapture';
 import AdminPanel from './components/AdminPanel';
 import Login from './components/Login';
 import Register from './components/Register';
+import ProjectSelector from './components/ProjectSelector';
+import CreateProjectDialog from './components/CreateProjectDialog';
+import { ProjectProvider } from './context/ProjectContext';
 import {
   initDB,
   getAllAudioNotes,
@@ -42,6 +45,7 @@ export default function App() {
   const [notes, setNotes] = useState([]);
   const [images, setImages] = useState([]);
   const [showDbSettings, setShowDbSettings] = useState(false);
+  const [showCreateProject, setShowCreateProject] = useState(false);
   const [previewNote, setPreviewNote] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0, message: '' });
@@ -267,43 +271,47 @@ export default function App() {
   }
 
   return (
-    <div className="app">
-      {/* Header */}
-      <header className="app-header">
-        <div className="header-left">
-          <img src="/logo.svg" alt="pyArchInit Mobile PWA" className="app-logo" />
-          <div>
-            <h1>pyArchInit Mobile</h1>
-            {currentUser && (
-              <p className="user-info">👤 {currentUser.name}</p>
-            )}
+    <ProjectProvider>
+      <div className="app">
+        {/* Header */}
+        <header className="app-header">
+          <div className="header-left">
+            <img src="/logo.svg" alt="pyArchInit Mobile PWA" className="app-logo" />
+            <div>
+              <h1>pyArchInit Mobile</h1>
+              {currentUser && (
+                <p className="user-info">👤 {currentUser.name}</p>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="header-right">
-          <button
-            onClick={() => setShowDbSettings(true)}
-            className="btn-settings"
-            title="Database Settings"
-          >
-            ⚙️
-          </button>
-          <button
-            onClick={handleLogout}
-            className="btn-logout"
-            title="Logout"
-          >
-            🚪
-          </button>
-          <div className="status">
-            <span className={online ? 'online' : 'offline'}>
-              {online ? '🟢 Online' : '🔴 Offline'}
-            </span>
-            {syncStats.total > 0 && !syncing && (
-              <span className="sync-badge">{syncStats.total} to sync</span>
-            )}
+          <div className="header-center">
+            <ProjectSelector onCreateNew={() => setShowCreateProject(true)} />
           </div>
-        </div>
-      </header>
+          <div className="header-right">
+            <button
+              onClick={() => setShowDbSettings(true)}
+              className="btn-settings"
+              title="Database Settings"
+            >
+              ⚙️
+            </button>
+            <button
+              onClick={handleLogout}
+              className="btn-logout"
+              title="Logout"
+            >
+              🚪
+            </button>
+            <div className="status">
+              <span className={online ? 'online' : 'offline'}>
+                {online ? '🟢 Online' : '🔴 Offline'}
+              </span>
+              {syncStats.total > 0 && !syncing && (
+                <span className="sync-badge">{syncStats.total} to sync</span>
+              )}
+            </div>
+          </div>
+        </header>
 
       {/* Sync Progress Banner */}
       {syncing && (
@@ -689,6 +697,12 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Create Project Dialog */}
+      <CreateProjectDialog
+        isOpen={showCreateProject}
+        onClose={() => setShowCreateProject(false)}
+      />
 
       <style>{`
         * {
@@ -1334,7 +1348,15 @@ export default function App() {
           margin-bottom: 0.5rem;
           font-size: 0.85rem;
         }
+
+        .header-center {
+          flex: 1;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
       `}</style>
     </div>
+    </ProjectProvider>
   );
 }

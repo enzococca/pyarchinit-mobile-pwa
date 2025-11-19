@@ -64,11 +64,17 @@ function NotePreview({ note, onClose, onSave, onRefresh }) {
       return;
     }
 
+    // Check if note has been synced to server
+    if (!note.serverNoteId) {
+      alert('This note must be synced to the server first. Please sync your notes and try again.');
+      return;
+    }
+
     setProcessing(true);
     try {
       setProcessingStatus('🎤 Transcribing audio with Whisper AI...');
 
-      const response = await axios.post(`${API_BASE}/notes/${note.id}/process`, {
+      const response = await axios.post(`${API_BASE}/notes/${note.serverNoteId}/process`, {
         force_reprocess: true
       }, {
         headers: getAuthHeaders()
@@ -106,8 +112,9 @@ function NotePreview({ note, onClose, onSave, onRefresh }) {
       return;
     }
 
-    if (!note.id) {
-      alert('Error: Note ID is missing');
+    // Check if note has been synced to server
+    if (!note.serverNoteId) {
+      alert('This note must be synced to the server first. Please sync your notes and try again.');
       return;
     }
 
@@ -176,12 +183,12 @@ function NotePreview({ note, onClose, onSave, onRefresh }) {
       console.log('[NotePreview] Request data prepared, sending to backend...');
       console.log('[NotePreview] Entity type:', safeEntityType, 'Target table:', safeTargetTable);
 
-      const response = await axios.post(`${API_BASE}/notes/${note.id}/confirm`, requestData, {
+      const response = await axios.post(`${API_BASE}/notes/${note.serverNoteId}/confirm`, requestData, {
         headers: getAuthHeaders()
       });
       console.log('[NotePreview] Backend response received successfully');
 
-      // Mark note as saved to database in local storage
+      // Mark note as saved to database in local storage (using local ID)
       await updateAudioNote(note.id, { savedToDb: true });
       console.log('[NotePreview] Note marked as saved to DB in local storage');
 
@@ -246,8 +253,14 @@ function NotePreview({ note, onClose, onSave, onRefresh }) {
       return;
     }
 
+    // Check if note has been synced to server
+    if (!note.serverNoteId) {
+      alert('This note must be synced to the server first. Please sync your notes and try again.');
+      return;
+    }
+
     try {
-      await axios.post(`${API_BASE}/notes/${note.id}/reject`, {}, {
+      await axios.post(`${API_BASE}/notes/${note.serverNoteId}/reject`, {}, {
         headers: getAuthHeaders()
       });
       alert('Note rejected');
