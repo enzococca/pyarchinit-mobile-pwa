@@ -29,7 +29,7 @@ class UserRole(str, Enum):
 
 class SQLiteConfig(BaseModel):
     """SQLite database configuration"""
-    path: str = Field(..., description="Path to SQLite database file")
+    path: Optional[str] = Field(None, description="Path to SQLite database file (auto-generated if not provided)")
 
 
 class PostgresConfig(BaseModel):

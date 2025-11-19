@@ -185,6 +185,9 @@ async def create_project(
         # Prepare db_config based on mode
         if project_data.db_mode == DatabaseMode.SQLITE:
             db_config = project_data.sqlite_config.dict()
+            # Auto-generate path if not provided
+            if not db_config.get('path'):
+                db_config['path'] = f"/data/projects/project_{current_user.id}_{project_data.name.lower().replace(' ', '_')}.sqlite"
         else:  # postgres or hybrid
             db_config = project_data.postgres_config.dict()
 
