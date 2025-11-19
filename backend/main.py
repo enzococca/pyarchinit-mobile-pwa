@@ -242,11 +242,11 @@ async def test_database_connection(config: DatabaseConfig):
 # ============= DATABASE MODE MANAGEMENT =============
 
 @app.get("/api/auth/db-mode")
-async def get_database_mode(current_user: dict = Depends(get_current_user), db: Session = Depends(get_auth_db)):
+async def get_database_mode(current_user: User = Depends(get_current_user), db: Session = Depends(get_auth_db)):
     """Get current user's database mode configuration"""
     from backend.models.auth import User
 
-    user = db.query(User).filter(User.id == current_user['user_id']).first()
+    user = db.query(User).filter(User.id == current_user.id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -265,7 +265,7 @@ async def get_database_mode(current_user: dict = Depends(get_current_user), db: 
 async def configure_database(
     mode: str = Body(...),
     config: dict = Body(None),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_auth_db)
 ):
     """Save database configuration for current user"""
@@ -275,7 +275,7 @@ async def configure_database(
     if mode not in ["sqlite", "separate", "hybrid"]:
         raise HTTPException(status_code=400, detail="Invalid database mode")
 
-    user = db.query(User).filter(User.id == current_user['user_id']).first()
+    user = db.query(User).filter(User.id == current_user.id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -302,7 +302,7 @@ async def configure_database(
 @app.post("/api/database/upload-sqlite")
 async def upload_sqlite_database(
     file: UploadFile = File(...),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_auth_db)
 ):
     """Upload SQLite database file for current user"""
@@ -313,7 +313,7 @@ async def upload_sqlite_database(
     if not file.filename.endswith(('.sqlite', '.db')):
         raise HTTPException(status_code=400, detail="File must be .sqlite or .db")
 
-    user = db.query(User).filter(User.id == current_user['user_id']).first()
+    user = db.query(User).filter(User.id == current_user.id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -346,13 +346,13 @@ async def upload_sqlite_database(
 
 @app.get("/api/database/download-sqlite")
 async def download_sqlite_database(
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_auth_db)
 ):
     """Download current user's SQLite database"""
     from backend.models.auth import User
 
-    user = db.query(User).filter(User.id == current_user['user_id']).first()
+    user = db.query(User).filter(User.id == current_user.id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -383,11 +383,11 @@ async def download_sqlite_database(
 
 # ============= ADMIN USER MANAGEMENT =============
 
-def get_current_admin(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_current_admin(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Verify current user is an admin"""
     from backend.models.auth import User
 
-    user = db.query(User).filter(User.id == current_user['user_id']).first()
+    user = db.query(User).filter(User.id == current_user.id).first()
     if not user or user.role != 'admin':
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
