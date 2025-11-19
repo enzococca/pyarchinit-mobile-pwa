@@ -309,7 +309,9 @@ class MediaProcessor:
         try:
             query = text("SELECT * FROM media_table WHERE id_media = :media_id")
             result = db.execute(query, {'media_id': media_id}).fetchone()
-            return result
+            if result:
+                return dict(result._mapping)
+            return None
         except Exception as e:
             raise Exception(f"Error getting media: {str(e)}")
 
@@ -318,6 +320,8 @@ class MediaProcessor:
         try:
             query = text("SELECT * FROM media_thumb_table WHERE id_media = :media_id")
             result = db.execute(query, {'media_id': media_id}).fetchone()
-            return result
+            if result:
+                return dict(result._mapping)
+            return None
         except Exception as e:
             raise Exception(f"Error getting media thumb: {str(e)}")

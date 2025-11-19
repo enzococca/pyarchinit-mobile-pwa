@@ -386,7 +386,9 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
     Raises:
         HTTPException: If user is not admin
     """
-    if current_user.role.value != "admin":
+    # Handle both Enum (PostgreSQL) and String (SQLite) for role
+    role_str = current_user.role.value if hasattr(current_user.role, 'value') else current_user.role
+    if role_str != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
