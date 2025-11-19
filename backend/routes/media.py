@@ -14,11 +14,10 @@ from io import BytesIO
 
 from backend.services.auth_service import AuthService, get_current_user
 from backend.models.auth import User
-from backend.services.db_manager import DatabaseManager, get_db
+from backend.services.dynamic_db_manager import get_user_workspace_db
 from backend.services.media_processor import MediaProcessor
 
 router = APIRouter(prefix="/api/media", tags=["media"])
-db_manager = DatabaseManager()
 media_processor = MediaProcessor()
 
 
@@ -78,7 +77,7 @@ async def upload_photo(
     numero_inventario: Optional[int] = Form(None),
     description: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_user_workspace_db)
 ):
     """
     Upload a photo with optional entity tagging
@@ -200,7 +199,7 @@ async def upload_video(
     sito: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_user_workspace_db)
 ):
     """
     Upload a video file with optional entity tagging
@@ -276,7 +275,7 @@ async def upload_3d_scan(
     description: Optional[str] = Form(None),
     scan_type: str = Form("lidar"),  # "lidar" | "photogrammetry"
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_user_workspace_db)
 ):
     """
     Upload a 3D scan file (LiDAR or photogrammetry)
@@ -354,7 +353,7 @@ async def upload_3d_scan(
 @router.get("/my-media")
 async def get_my_media(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_user_workspace_db)
 ):
     """
     Get all media uploaded by the current user
@@ -406,7 +405,8 @@ async def get_my_media(
 async def download_media(
     media_id: int,
     size: str = "original",  # "original" | "thumb" | "resize"
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_user_workspace_db)
 ):
     """
     Download media file in specified size
