@@ -62,13 +62,11 @@ export default function AdminPanel() {
       setSuccess(null);
 
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/admin/users/approve`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/admin/approve/${userId}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ user_id: userId })
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       if (!response.ok) {
@@ -97,13 +95,11 @@ export default function AdminPanel() {
       setSuccess(null);
 
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/admin/users/reject`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/admin/reject/${userId}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ user_id: userId })
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       if (!response.ok) {
@@ -112,6 +108,64 @@ export default function AdminPanel() {
       }
 
       setSuccess('Utente rifiutato');
+      await loadUsers();
+
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const changeUserRole = async (userId, newRole) => {
+    try {
+      setLoading(true);
+      setError(null);
+      setSuccess(null);
+
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/admin/users/${userId}/role?role=${newRole}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Errore nel cambio ruolo');
+      }
+
+      setSuccess(`Ruolo cambiato a ${newRole}`);
+      await loadUsers();
+
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleUserActive = async (userId) => {
+    try {
+      setLoading(true);
+      setError(null);
+      setSuccess(null);
+
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/admin/users/${userId}/toggle-active`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Errore nel cambio stato');
+      }
+
+      setSuccess('Stato utente aggiornato');
       await loadUsers();
 
     } catch (err) {
@@ -441,52 +495,100 @@ export default function AdminPanel() {
                       {getStatusBadge(user.approval_status)}
                     </td>
                     <td style={{ padding: '20px 24px', textAlign: 'right' }}>
-                      {user.approval_status === 'pending' && (
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                          <button
-                            onClick={() => approveUser(user.id)}
-                            disabled={loading}
-                            style={{
-                              background: '#10b981',
-                              color: 'white',
-                              border: 'none',
-                              padding: '8px 16px',
-                              borderRadius: '8px',
-                              cursor: loading ? 'not-allowed' : 'pointer',
-                              fontSize: '14px',
-                              fontWeight: '600',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              opacity: loading ? 0.6 : 1
-                            }}
-                          >
-                            <CheckCircle size={16} />
-                            Approva
-                          </button>
-                          <button
-                            onClick={() => rejectUser(user.id)}
-                            disabled={loading}
-                            style={{
-                              background: '#ef4444',
-                              color: 'white',
-                              border: 'none',
-                              padding: '8px 16px',
-                              borderRadius: '8px',
-                              cursor: loading ? 'not-allowed' : 'pointer',
-                              fontSize: '14px',
-                              fontWeight: '600',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              opacity: loading ? 0.6 : 1
-                            }}
-                          >
-                            <XCircle size={16} />
-                            Rifiuta
-                          </button>
-                        </div>
-                      )}
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                        {user.approval_status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => approveUser(user.id)}
+                              disabled={loading}
+                              style={{
+                                background: '#10b981',
+                                color: 'white',
+                                border: 'none',
+                                padding: '8px 16px',
+                                borderRadius: '8px',
+                                cursor: loading ? 'not-allowed' : 'pointer',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                opacity: loading ? 0.6 : 1
+                              }}
+                            >
+                              <CheckCircle size={16} />
+                              Approva
+                            </button>
+                            <button
+                              onClick={() => rejectUser(user.id)}
+                              disabled={loading}
+                              style={{
+                                background: '#ef4444',
+                                color: 'white',
+                                border: 'none',
+                                padding: '8px 16px',
+                                borderRadius: '8px',
+                                cursor: loading ? 'not-allowed' : 'pointer',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                opacity: loading ? 0.6 : 1
+                              }}
+                            >
+                              <XCircle size={16} />
+                              Rifiuta
+                            </button>
+                          </>
+                        )}
+                        {user.approval_status === 'approved' && (
+                          <>
+                            <select
+                              value={user.role}
+                              onChange={(e) => changeUserRole(user.id, e.target.value)}
+                              disabled={loading}
+                              style={{
+                                padding: '8px 12px',
+                                borderRadius: '8px',
+                                border: '1px solid #d1d5db',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                cursor: loading ? 'not-allowed' : 'pointer',
+                                background: 'white',
+                                opacity: loading ? 0.6 : 1
+                              }}
+                            >
+                              <option value="admin">Admin</option>
+                              <option value="archaeologist">Archaeologist</option>
+                              <option value="student">Student</option>
+                              <option value="viewer">Viewer</option>
+                            </select>
+                            <button
+                              onClick={() => toggleUserActive(user.id)}
+                              disabled={loading}
+                              style={{
+                                background: user.is_active ? '#f59e0b' : '#10b981',
+                                color: 'white',
+                                border: 'none',
+                                padding: '8px 16px',
+                                borderRadius: '8px',
+                                cursor: loading ? 'not-allowed' : 'pointer',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                opacity: loading ? 0.6 : 1
+                              }}
+                            >
+                              {user.is_active ? 'Disattiva' : 'Attiva'}
+                            </button>
+                          </>
+                        )}
+                        {user.approval_status === 'rejected' && (
+                          <span style={{ fontSize: '13px', color: '#6b7280', fontStyle: 'italic' }}>
+                            Nessuna azione disponibile
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

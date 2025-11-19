@@ -254,12 +254,16 @@ async def get_all_users(
             {"user_id": user.id}
         ).scalar()
 
+        # Get approval_status with fallback for older records
+        approval_status = getattr(user, 'approval_status', 'approved')
+
         user_list.append({
             "id": user.id,
             "email": user.email,
             "name": user.name,
             "role": user.role.value if hasattr(user.role, 'value') else user.role,
             "is_active": user.is_active,
+            "approval_status": approval_status,
             "projects_count": project_count or 0,
             "created_at": user.created_at.isoformat() if hasattr(user, 'created_at') and user.created_at else None
         })
