@@ -22,7 +22,7 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     // Ottieni token da localStorage
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('auth_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -47,7 +47,7 @@ api.interceptors.response.use(
 
       if (status === 401) {
         // Token non valido o scaduto - redirect a login
-        localStorage.removeItem('token');
+        localStorage.removeItem('auth_token');
         localStorage.removeItem('user');
         window.location.href = '/login';
       } else if (status === 403) {
