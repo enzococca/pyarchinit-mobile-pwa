@@ -5,6 +5,7 @@ Permette switching dinamico tra SQLite e PostgreSQL per ogni progetto.
 """
 import os
 import json
+import shutil
 from typing import Dict, Optional
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
@@ -178,40 +179,30 @@ class DynamicDatabaseManager:
         return engine
 
     def _initialize_pyarchinit_db(self, db_path: str):
-        """Inizializza nuovo database SQLite con schema PyArchInit"""
-        schema_path = os.path.join(
+        """
+        Inizializza nuovo database SQLite copiando il template PyArchInit completo.
+
+        Copia il database pyarchinit_db.sqlite (completo con schema e dati) come template
+        invece di eseguire SQL, garantendo che tutte le tabelle e relazioni siano corrette.
+        """
+        # Path al database template (completo, ~4.9MB)
+        template_db_path = os.path.join(
             os.path.dirname(__file__),
             "..",
-            "schema",
-            "pyarchinit_minimal.sql"
+            "pyarchinit_db.sqlite"
         )
 
-        if not os.path.exists(schema_path):
-            raise FileNotFoundError(f"Schema file not found: {schema_path}")
+        if not os.path.exists(template_db_path):
+            raise FileNotFoundError(
+                f"PyArchInit template database not found: {template_db_path}\n"
+                f"Expected a complete PyArchInit database file (~4-5MB)"
+            )
 
-        # Leggi schema
-        with open(schema_path, 'r') as f:
-            schema_sql = f.read()
+        # Copia il database template nella posizione target
+        shutil.copy2(template_db_path, db_path)
 
-        # Crea database
-        temp_engine = create_engine(
-            f"sqlite:///{db_path}",
-            connect_args={"check_same_thread": False}
-        )
-
-        with temp_engine.connect() as conn:
-            # Esegui ogni statement
-            statements = [s.strip() for s in schema_sql.split(';') if s.strip() and not s.strip().startswith('--')]
-
-            for statement in statements:
-                if statement:
-                    conn.execute(text(statement))
-
-            conn.commit()
-
-        temp_engine.dispose()
-
-        print(f"✅ Initialized PyArchInit database: {db_path}")
+        print(f"✅ Initialized PyArchInit database from template: {db_path}")
+        print(f"   Template: {template_db_path} ({os.path.getsize(template_db_path) / 1024 / 1024:.1f}MB)")
 
     def _setup_rls(self, engine: Engine, project_id: int):
         """
