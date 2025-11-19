@@ -268,3 +268,236 @@ async def get_all_users(
         "users": user_list,
         "total": len(user_list)
     }
+
+
+@router.post("/emergency-approve")
+async def emergency_approve_first_admin(db: Session = Depends(get_auth_db)):
+    """
+    Emergency endpoint: Auto-approve first user as admin if no approved admins exist
+
+    Use this ONLY when the first admin is stuck in pending status
+    Returns success message or error if conditions not met
+    """
+    from sqlalchemy import text
+
+    # Check if there are any approved admins
+    approved_admin = db.execute(
+        text("""
+            SELECT id FROM users
+            WHERE role = 'admin' AND approval_status = 'approved'
+            LIMIT 1
+        """)
+    ).fetchone()
+
+    if approved_admin:
+        raise HTTPException(
+            status_code=400,
+            detail="An approved admin already exists. Emergency approval not needed."
+        )
+
+    # Auto-approve the first registered user (ID = 1)
+    result = db.execute(
+        text("""
+            UPDATE users
+            SET approval_status = 'approved', role = 'admin'
+            WHERE id = 1
+        """)
+    )
+    db.commit()
+
+    if result.rowcount == 0:
+        raise HTTPException(
+            status_code=404,
+            detail="User with ID 1 not found"
+        )
+
+    # Get updated user info
+    user = db.execute(
+        text("SELECT id, email, name, role, approval_status FROM users WHERE id = 1")
+    ).fetchone()
+
+    return {
+        "success": True,
+        "message": "First admin auto-approved successfully!",
+        "user": {
+            "id": user[0],
+            "email": user[1],
+            "name": user[2],
+            "role": user[3],
+            "approval_status": user[4]
+        }
+    }
+
+
+@router.post("/admin/approve/{user_id}")
+async def approve_user(
+    user_id: int,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_auth_db)
+):
+    """
+    Approve pending user (Admin only)
+
+    Requires: Admin role
+    Changes user approval_status from 'pending' to 'approved'
+    """
+    from sqlalchemy import text
+
+    # Check if user exists
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Update approval status
+    db.execute(
+        text("UPDATE users SET approval_status = 'approved' WHERE id = :user_id"),
+        {"user_id": user_id}
+    )
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"User {user.email} approved successfully",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "approval_status": "approved"
+        }
+    }
+
+
+@router.post("/admin/reject/{user_id}")
+async def reject_user(
+    user_id: int,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_auth_db)
+):
+    """
+    Reject pending user (Admin only)
+
+    Requires: Admin role
+    Changes user approval_status from 'pending' to 'rejected'
+    """
+    from sqlalchemy import text
+
+    # Check if user exists
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Cannot reject yourself
+    if user.id == admin.id:
+        raise HTTPException(status_code=400, detail="Cannot reject yourself")
+
+    # Update approval status
+    db.execute(
+        text("UPDATE users SET approval_status = 'rejected' WHERE id = :user_id"),
+        {"user_id": user_id}
+    )
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"User {user.email} rejected",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "approval_status": "rejected"
+        }
+    }
+
+
+@router.put("/admin/users/{user_id}/role")
+async def change_user_role(
+    user_id: int,
+    role: str,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_auth_db)
+):
+    """
+    Change user role (Admin only)
+
+    Requires: Admin role
+    Allowed roles: admin, archaeologist, student, viewer
+    """
+    from sqlalchemy import text
+
+    # Validate role
+    allowed_roles = ["admin", "archaeologist", "student", "viewer"]
+    if role not in allowed_roles:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid role. Allowed: {', '.join(allowed_roles)}"
+        )
+
+    # Check if user exists
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Cannot change your own role
+    if user.id == admin.id:
+        raise HTTPException(status_code=400, detail="Cannot change your own role")
+
+    # Update role
+    db.execute(
+        text("UPDATE users SET role = :role WHERE id = :user_id"),
+        {"role": role, "user_id": user_id}
+    )
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"User {user.email} role changed to {role}",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "role": role
+        }
+    }
+
+
+@router.put("/admin/users/{user_id}/toggle-active")
+async def toggle_user_active(
+    user_id: int,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_auth_db)
+):
+    """
+    Activate/Deactivate user (Admin only)
+
+    Requires: Admin role
+    Toggles user's is_active status
+    """
+    from sqlalchemy import text
+
+    # Check if user exists
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Cannot deactivate yourself
+    if user.id == admin.id:
+        raise HTTPException(status_code=400, detail="Cannot deactivate yourself")
+
+    # Toggle active status
+    new_status = not user.is_active
+    db.execute(
+        text("UPDATE users SET is_active = :status WHERE id = :user_id"),
+        {"status": new_status, "user_id": user_id}
+    )
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"User {user.email} {'activated' if new_status else 'deactivated'}",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "is_active": new_status
+        }
+    }
