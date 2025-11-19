@@ -192,10 +192,13 @@ async def create_project(
             db_config = project_data.postgres_config.dict()
 
         # Insert project
+        from datetime import datetime
+        now = datetime.utcnow()
+
         result = db.execute(
             text("""
-                INSERT INTO projects (name, description, owner_id, db_mode, db_config, is_personal)
-                VALUES (:name, :description, :owner_id, :db_mode, :db_config, :is_personal)
+                INSERT INTO projects (name, description, owner_id, db_mode, db_config, is_personal, created_at, updated_at)
+                VALUES (:name, :description, :owner_id, :db_mode, :db_config, :is_personal, :created_at, :updated_at)
             """),
             {
                 "name": project_data.name,
@@ -203,7 +206,9 @@ async def create_project(
                 "owner_id": current_user.id,
                 "db_mode": project_data.db_mode.value,
                 "db_config": json.dumps(db_config),
-                "is_personal": False
+                "is_personal": False,
+                "created_at": now,
+                "updated_at": now
             }
         )
 
