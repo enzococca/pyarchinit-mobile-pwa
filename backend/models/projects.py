@@ -108,8 +108,8 @@ class ProjectInfo(BaseModel):
     owner_id: int
     db_mode: DatabaseMode
     is_personal: bool
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     # Current user's role and permissions
     my_role: Optional[UserRole] = None
@@ -131,8 +131,8 @@ class ProjectListItem(BaseModel):
     is_personal: bool
     my_role: UserRole
     team_size: int
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
