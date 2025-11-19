@@ -17,6 +17,7 @@ from pydantic import BaseModel
 
 from backend.config import settings
 from backend.models.database import get_db, Media, MobileNote, US, Site, Model3D, init_db
+from backend.services.db_manager import get_auth_db
 from backend.services.image_processor import ImageProcessor, ImageValidator
 from backend.services.ai_processor import ArchaeologicalAIInterpreter
 from backend.services.stratigraphic_utils import parse_relationships, format_relationships_for_db
