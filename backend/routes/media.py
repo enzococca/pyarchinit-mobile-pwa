@@ -3,10 +3,14 @@ Media capture and management routes
 Handles photo, video, and 3D media upload with entity tagging
 """
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from pydantic import BaseModel
 from datetime import datetime
+import os
+import zipfile
+from io import BytesIO
 
 from backend.services.auth_service import AuthService, get_current_user
 from backend.models.auth import User
@@ -473,3 +477,102 @@ async def download_media(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error downloading media: {str(e)}")
+
+
+@router.get("/download-all-zip")
+async def download_all_media_zip(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Download all media files organized in ZIP
+
+    Creates a ZIP file with media organized by folders:
+    - original/ - Original images
+    - resize/ - Resized images (800x600)
+    - thumb/ - Thumbnails (150x150)
+    - videos/ - Video files
+    - 3d_models/ - 3D model files
+
+    Requires authentication
+    """
+    try:
+        from backend.config import settings
+
+        # Create in-memory ZIP file
+        zip_buffer = BytesIO()
+
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            # Track file count and total size
+            file_count = 0
+            total_size = 0
+
+            # Function to add files from a directory to the ZIP
+            def add_directory_to_zip(source_dir: str, zip_folder_name: str):
+                nonlocal file_count, total_size
+
+                if not os.path.exists(source_dir):
+                    return
+
+                for root, dirs, files in os.walk(source_dir):
+                    for file in files:
+                        # Skip hidden files and system files
+                        if file.startswith('.'):
+                            continue
+
+                        file_path = os.path.join(root, file)
+
+                        # Calculate relative path within the source directory
+                        relative_path = os.path.relpath(file_path, source_dir)
+
+                        # Add to ZIP with organized folder structure
+                        zip_path = os.path.join(zip_folder_name, relative_path)
+
+                        try:
+                            zip_file.write(file_path, zip_path)
+                            file_count += 1
+                            total_size += os.path.getsize(file_path)
+                        except Exception as e:
+                            print(f"Warning: Could not add {file_path} to ZIP: {e}")
+
+            # Add original images
+            media_root = settings.PYARCHINIT_MEDIA_ROOT
+            add_directory_to_zip(media_root, "original")
+
+            # Add resized images
+            if hasattr(settings, 'PYARCHINIT_MEDIA_RESIZE') and settings.PYARCHINIT_MEDIA_RESIZE:
+                add_directory_to_zip(settings.PYARCHINIT_MEDIA_RESIZE, "resize")
+
+            # Add thumbnails
+            if hasattr(settings, 'PYARCHINIT_MEDIA_THUMB') and settings.PYARCHINIT_MEDIA_THUMB:
+                add_directory_to_zip(settings.PYARCHINIT_MEDIA_THUMB, "thumb")
+
+            # Add videos (if they exist in subdirectory)
+            videos_dir = os.path.join(media_root, "videos")
+            if os.path.exists(videos_dir):
+                add_directory_to_zip(videos_dir, "videos")
+
+            # Add 3D models (if they exist in subdirectory)
+            models_dir = os.path.join(media_root, "3d_models")
+            if os.path.exists(models_dir):
+                add_directory_to_zip(models_dir, "3d_models")
+
+        # Seek to beginning of buffer
+        zip_buffer.seek(0)
+
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"pyarchinit_media_{timestamp}.zip"
+
+        # Return ZIP file as streaming response
+        return StreamingResponse(
+            zip_buffer,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}",
+                "X-File-Count": str(file_count),
+                "X-Total-Size": str(total_size)
+            }
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating ZIP file: {str(e)}")
