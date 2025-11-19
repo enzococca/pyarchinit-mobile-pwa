@@ -241,7 +241,7 @@ async def test_database_connection(config: DatabaseConfig):
 # ============= DATABASE MODE MANAGEMENT =============
 
 @app.get("/api/auth/db-mode")
-async def get_database_mode(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+async def get_database_mode(current_user: dict = Depends(get_current_user), db: Session = Depends(get_auth_db)):
     """Get current user's database mode configuration"""
     from backend.models.auth import User
 
@@ -265,7 +265,7 @@ async def configure_database(
     mode: str = Body(...),
     config: dict = Body(None),
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_auth_db)
 ):
     """Save database configuration for current user"""
     from backend.models.auth import User
@@ -302,7 +302,7 @@ async def configure_database(
 async def upload_sqlite_database(
     file: UploadFile = File(...),
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_auth_db)
 ):
     """Upload SQLite database file for current user"""
     from backend.models.auth import User
@@ -346,7 +346,7 @@ async def upload_sqlite_database(
 @app.get("/api/database/download-sqlite")
 async def download_sqlite_database(
     current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_auth_db)
 ):
     """Download current user's SQLite database"""
     from backend.models.auth import User

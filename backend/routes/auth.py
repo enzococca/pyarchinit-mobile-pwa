@@ -250,7 +250,7 @@ async def get_all_users(
     for user in users:
         # Count projects for each user
         project_count = db.execute(
-            text("SELECT COUNT(*) FROM project_teams WHERE user_id = :user_id"),
+            text("SELECT COUNT(*) FROM project_collaborators WHERE user_id = :user_id"),
             {"user_id": user.id}
         ).scalar()
 

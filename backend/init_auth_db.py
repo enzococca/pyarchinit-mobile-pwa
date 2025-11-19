@@ -44,6 +44,32 @@ def init_auth_database():
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
+        # Aggiungi colonne mancanti per users
+        cursor.execute("PRAGMA table_info(users)")
+        user_columns = {row[1] for row in cursor.fetchall()}
+        print(f"   Colonne users esistenti: {user_columns}")
+
+        missing_user_columns = {
+            'approval_status': "VARCHAR(50) DEFAULT 'pending'",
+            'db_mode': "VARCHAR(50) DEFAULT 'sqlite'",
+            'pg_host': 'VARCHAR(255)',
+            'pg_port': 'INTEGER',
+            'pg_database': 'VARCHAR(255)',
+            'pg_user': 'VARCHAR(255)',
+            'pg_password': 'VARCHAR(255)',
+            'sqlite_db_path': 'VARCHAR(500)'
+        }
+
+        for col_name, col_type in missing_user_columns.items():
+            if col_name not in user_columns:
+                print(f"   ➕ Aggiunta colonna users: {col_name}")
+                try:
+                    cursor.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}")
+                except sqlite3.OperationalError as e:
+                    if "duplicate column name" not in str(e).lower():
+                        print(f"   ⚠️  Errore aggiunta colonna {col_name}: {e}")
+
         print("✅ Tabella users OK")
 
         # ============================================
@@ -100,29 +126,28 @@ def init_auth_database():
         print("✅ Tabella projects OK")
 
         # ============================================
-        # 3. TABELLA PROJECT_TEAMS
+        # 3. TABELLA PROJECT_COLLABORATORS
         # ============================================
-        print("📝 Creazione/Aggiornamento tabella project_teams...")
+        print("📝 Creazione/Aggiornamento tabella project_collaborators...")
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS project_teams (
+            CREATE TABLE IF NOT EXISTS project_collaborators (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
                 user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                role VARCHAR(20) DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'member', 'viewer')),
-                permissions TEXT,
-                joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                role VARCHAR(20) DEFAULT 'contributor' CHECK (role IN ('owner', 'editor', 'contributor', 'viewer')),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(project_id, user_id)
             )
         """)
-        print("✅ Tabella project_teams OK")
+        print("✅ Tabella project_collaborators OK")
 
         # ============================================
         # 4. INDICI PER PERFORMANCE
         # ============================================
         print("📝 Creazione indici...")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_projects_owner ON projects(owner_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_project_teams_project ON project_teams(project_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_project_teams_user ON project_teams(user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_project_collaborators_project ON project_collaborators(project_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_project_collaborators_user ON project_collaborators(user_id)")
         print("✅ Indici OK")
 
         # Commit delle modifiche
