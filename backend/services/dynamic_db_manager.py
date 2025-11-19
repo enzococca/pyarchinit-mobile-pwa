@@ -3,15 +3,20 @@ Dynamic Database Manager
 Gestisce connessioni multiple a database di progetti differenti.
 Permette switching dinamico tra SQLite e PostgreSQL per ogni progetto.
 """
+from __future__ import annotations
+
 import os
 import json
 import shutil
-from typing import Dict, Optional
+from typing import Dict, Optional, TYPE_CHECKING
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import StaticPool
 
 from backend.config import settings
+
+if TYPE_CHECKING:
+    from backend.models.auth import User
 
 
 class DynamicDatabaseManager:
@@ -358,7 +363,7 @@ def get_project_db(project_id: int):
         session.close()
 
 
-def get_user_workspace_db(current_user: "User"):
+def get_user_workspace_db(current_user: User):
     """
     Dependency per ottenere sessione database del workspace personale dell'utente.
 
