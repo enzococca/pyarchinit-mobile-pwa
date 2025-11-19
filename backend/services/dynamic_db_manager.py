@@ -363,57 +363,63 @@ def get_project_db(project_id: int):
         session.close()
 
 
-def get_user_workspace_db(current_user: User):
+def get_user_workspace_db_dependency():
     """
-    Dependency per ottenere sessione database del workspace personale dell'utente.
+    Factory function that returns a dependency for getting user's workspace database.
 
-    IMPORTANT: Must be used with get_current_user dependency.
+    This factory pattern allows us to properly inject get_current_user without
+    Pydantic type resolution issues.
 
     Usage:
-        from backend.services.auth_service import get_current_user
-        from backend.services.dynamic_db_manager import get_user_workspace_db
+        from backend.services.dynamic_db_manager import get_user_workspace_db_dependency
+
+        get_user_workspace_db = get_user_workspace_db_dependency()
 
         @router.post("/upload")
-        async def upload(
-            current_user: User = Depends(get_current_user),
-            db: Session = Depends(get_user_workspace_db)
-        ):
+        async def upload(db: Session = Depends(get_user_workspace_db)):
             # db is now the user's personal workspace database
             ...
 
-    Args:
-        current_user: Current authenticated user (injected by FastAPI from get_current_user)
-
-    Yields:
-        Database session for user's personal workspace
+    Returns:
+        A dependency function that yields a database session
     """
-    manager = get_db_manager()
-
-    # Get user's personal workspace from auth database
-    with manager.auth_engine.connect() as conn:
-        result = conn.execute(
-            text("""
-                SELECT p.id
-                FROM projects p
-                INNER JOIN project_teams pt ON p.id = pt.project_id
-                WHERE pt.user_id = :user_id AND p.is_personal = 1
-                LIMIT 1
-            """),
-            {"user_id": current_user.id}
-        ).fetchone()
-
-    if not result:
-        raise ValueError(f"No personal workspace found for user {current_user.id}")
-
-    project_id = result[0]
-
-    # Get project database session
-    engine = manager.get_project_db(project_id)
-
+    from backend.services.auth_service import get_current_user
+    from fastapi import Depends
     from sqlalchemy.orm import Session
-    session = Session(engine)
 
-    try:
-        yield session
-    finally:
-        session.close()
+    def dependency(current_user = Depends(get_current_user)):
+        """Get database session for user's personal workspace"""
+        manager = get_db_manager()
+
+        # Get user's personal workspace from auth database
+        with manager.auth_engine.connect() as conn:
+            result = conn.execute(
+                text("""
+                    SELECT p.id
+                    FROM projects p
+                    INNER JOIN project_teams pt ON p.id = pt.project_id
+                    WHERE pt.user_id = :user_id AND p.is_personal = 1
+                    LIMIT 1
+                """),
+                {"user_id": current_user.id}
+            ).fetchone()
+
+        if not result:
+            raise ValueError(f"No personal workspace found for user {current_user.id}")
+
+        project_id = result[0]
+
+        # Get project database session
+        engine = manager.get_project_db(project_id)
+        session = Session(engine)
+
+        try:
+            yield session
+        finally:
+            session.close()
+
+    return dependency
+
+
+# Create the dependency instance
+get_user_workspace_db = get_user_workspace_db_dependency()
