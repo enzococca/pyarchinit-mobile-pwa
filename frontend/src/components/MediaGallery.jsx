@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Images, Video, Box, Download, X, Filter, RefreshCw, Maximize2, Edit3 } from 'lucide-react';
+import { Images, Video, Box, Download, X, Filter, RefreshCw, Maximize2, Edit3, Archive } from 'lucide-react';
 import ModelViewer from './ModelViewer';
 import ImageAnnotator from './ImageAnnotator';
 
@@ -45,6 +45,20 @@ function MediaCard({ item, onSelect, downloadMedia, getMediaIcon }) {
             onError={(e) => {
               e.target.style.display = 'none';
               e.target.parentElement.innerHTML = `<div style="display: flex; flex-direction: column; align-items: center; gap: 8px; color: #cbd5e0;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg><span style="font-size: 12px;">Immagine non disponibile</span></div>`;
+            }}
+          />
+        ) : item.media_type === 'video' && item.filepath ? (
+          <video
+            src={`${import.meta.env.VITE_API_URL}/api/media/download/${item.id_media}/original`}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover'
+            }}
+            muted
+            onError={(e) => {
+              e.target.style.display = 'none';
+              e.target.parentElement.innerHTML = `<div style="display: flex; flex-direction: column; align-items: center; gap: 8px; color: #cbd5e0;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg><span style="font-size: 12px;">Video</span></div>`;
             }}
           />
         ) : (
@@ -315,6 +329,42 @@ export default function MediaGallery() {
     }
   };
 
+  const downloadAllAsZip = async () => {
+    if (mediaItems.length === 0) {
+      alert('Nessun media da scaricare');
+      return;
+    }
+
+    setIsDownloadingZip(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/media/download-all-zip`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `pyarchinit_media_${Date.now()}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        const error = await response.json();
+        throw new Error(error.detail || 'Errore durante il download ZIP');
+      }
+    } catch (error) {
+      console.error('Error downloading ZIP:', error);
+      alert('Errore durante il download del file ZIP: ' + error.message);
+    } finally {
+      setIsDownloadingZip(false);
+    }
+  };
+
   const filters = [
     { id: 'all', label: 'Tutti', icon: Images },
     { id: 'image', label: 'Foto', icon: Images },
@@ -325,6 +375,8 @@ export default function MediaGallery() {
   // Hover states
   const [hoveredRefresh, setHoveredRefresh] = useState(false);
   const [hoveredFilter, setHoveredFilter] = useState(null);
+  const [hoveredZipDownload, setHoveredZipDownload] = useState(false);
+  const [isDownloadingZip, setIsDownloadingZip] = useState(false);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -353,25 +405,49 @@ export default function MediaGallery() {
             <Filter size={20} />
             Filtra Media
           </h3>
-          <button
-            onClick={loadMedia}
-            onMouseEnter={() => setHoveredRefresh(true)}
-            onMouseLeave={() => setHoveredRefresh(false)}
-            style={{
-              color: hoveredRefresh ? '#5568d3' : '#667eea',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              fontSize: '14px',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            <RefreshCw size={16} />
-            Ricarica
-          </button>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={downloadAllAsZip}
+              disabled={isDownloadingZip || mediaItems.length === 0}
+              onMouseEnter={() => setHoveredZipDownload(true)}
+              onMouseLeave={() => setHoveredZipDownload(false)}
+              style={{
+                color: isDownloadingZip || mediaItems.length === 0 ? '#cbd5e0' : (hoveredZipDownload ? '#059669' : '#10b981'),
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '14px',
+                background: 'none',
+                border: 'none',
+                cursor: isDownloadingZip || mediaItems.length === 0 ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s',
+                fontWeight: '500'
+              }}
+              title="Scarica tutti i media come ZIP"
+            >
+              <Archive size={16} />
+              {isDownloadingZip ? 'Creazione ZIP...' : 'Scarica ZIP'}
+            </button>
+            <button
+              onClick={loadMedia}
+              onMouseEnter={() => setHoveredRefresh(true)}
+              onMouseLeave={() => setHoveredRefresh(false)}
+              style={{
+                color: hoveredRefresh ? '#5568d3' : '#667eea',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '14px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              <RefreshCw size={16} />
+              Ricarica
+            </button>
+          </div>
         </div>
 
         <div style={{
@@ -577,11 +653,17 @@ export default function MediaGallery() {
 
               {selectedMedia.media_type === 'video' && (
                 <video
-                  src={selectedMedia.filepath}
+                  src={`${import.meta.env.VITE_API_URL}/api/media/download/${selectedMedia.id_media}/original`}
                   controls
                   style={{
                     width: '100%',
-                    borderRadius: '8px'
+                    borderRadius: '8px',
+                    maxHeight: '60vh',
+                    objectFit: 'contain',
+                    background: '#000'
+                  }}
+                  onError={(e) => {
+                    console.error('Error loading video:', e);
                   }}
                 />
               )}
