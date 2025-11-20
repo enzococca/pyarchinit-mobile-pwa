@@ -14,6 +14,16 @@
   justify-content: center;
   z-index: 2000;
   animation: fadeIn 0.2s ease;
+  pointer-events: auto;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .create-project-dialog {
@@ -166,6 +176,8 @@
   font-size: 14px;
   transition: all 0.2s ease;
   font-family: inherit;
+  pointer-events: auto;
+  user-select: text;
 }
 
 .form-group input:focus,
@@ -208,6 +220,7 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  pointer-events: auto;
 }
 
 .mode-option:hover {
