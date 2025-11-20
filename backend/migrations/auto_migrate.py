@@ -168,6 +168,37 @@ def migrate_pyarchinit_database(pyarchinit_engine):
         """
     )
 
+    # Create mobile_notes table for audio recordings with AI transcription
+    create_table_if_missing(
+        pyarchinit_engine,
+        'mobile_notes',
+        """
+        CREATE TABLE mobile_notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            audio_filename VARCHAR(200),
+            audio_path TEXT,
+            duration_seconds REAL,
+            transcription TEXT,
+            transcription_confidence REAL,
+            detected_language VARCHAR(10),
+            ai_interpretation TEXT,
+            ai_confidence REAL,
+            suggested_entity_type VARCHAR(50),
+            suggested_table VARCHAR(100),
+            status VARCHAR(50),
+            validated_by VARCHAR(200),
+            validated_at TIMESTAMP,
+            recorded_by VARCHAR(200),
+            recorded_at TIMESTAMP,
+            site_context VARCHAR(200),
+            gps_lat REAL,
+            gps_lon REAL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+
     logger.info("✅ PyArchInit database migration complete")
 
 
