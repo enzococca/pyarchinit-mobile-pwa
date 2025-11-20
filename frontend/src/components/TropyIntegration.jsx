@@ -160,32 +160,38 @@ export default function TropyIntegration({ onClose }) {
           color: 'white',
           position: 'relative'
         }}>
-          {onClose && (
-            <button
-              onClick={onClose}
-              style={{
-                position: 'absolute',
-                top: '16px',
-                right: '16px',
-                background: 'rgba(255,255,255,0.2)',
-                border: 'none',
-                color: 'white',
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                cursor: 'pointer',
-                fontSize: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
-            >
-              ✕
-            </button>
-          )}
+          <button
+            onClick={() => {
+              if (onClose) {
+                onClose();
+              } else {
+                // Fallback: use browser history if no onClose provided
+                window.history.back();
+              }
+            }}
+            style={{
+              position: 'absolute',
+              top: '16px',
+              right: '16px',
+              background: 'rgba(255,255,255,0.2)',
+              border: 'none',
+              color: 'white',
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              cursor: 'pointer',
+              fontSize: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+            title="Chiudi / Indietro"
+          >
+            ✕
+          </button>
           <FileJson size={48} style={{ marginBottom: '12px' }} />
           <h1 style={{
             fontSize: '24px',
