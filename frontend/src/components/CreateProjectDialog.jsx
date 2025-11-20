@@ -11,6 +11,7 @@
  */
 import { useState, useContext } from 'react';
 import { ProjectContext } from '../context/ProjectContext';
+import TeamManagement from './TeamManagement';
 import '../styles/CreateProjectDialog.css';
 
 const CreateProjectDialog = ({ isOpen, onClose }) => {
@@ -39,7 +40,8 @@ const CreateProjectDialog = ({ isOpen, onClose }) => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [step, setStep] = useState(1); // Step 1: Basic info, Step 2: DB config
+  const [step, setStep] = useState(1); // Step 1: Basic info, Step 2: DB config, Step 3: Share (optional)
+  const [createdProject, setCreatedProject] = useState(null); // Store created project for step 3
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -139,9 +141,9 @@ const CreateProjectDialog = ({ isOpen, onClose }) => {
           await uploadDatabase(result.project.id, sqliteConfig.db_file);
         }
 
-        // Chiudi dialog
-        onClose();
-        resetForm();
+        // Store project and move to step 3 (team management)
+        setCreatedProject(result.project);
+        setStep(3);
       } else {
         setError(result.error || 'Failed to create project');
       }
@@ -229,6 +231,11 @@ const CreateProjectDialog = ({ isOpen, onClose }) => {
           <div className={`step ${step >= 2 ? 'active' : ''}`}>
             <span className="step-number">2</span>
             <span className="step-label">Database</span>
+          </div>
+          <div className="step-divider"></div>
+          <div className={`step ${step >= 3 ? 'active' : ''}`}>
+            <span className="step-number">3</span>
+            <span className="step-label">Share</span>
           </div>
         </div>
 
@@ -415,6 +422,24 @@ const CreateProjectDialog = ({ isOpen, onClose }) => {
             </div>
           )}
 
+          {/* Step 3: Team Management (Optional) */}
+          {step === 3 && createdProject && (
+            <div className="dialog-body">
+              <div className="success-message" style={{ marginBottom: '1.5rem' }}>
+                ✅ Project "{createdProject.name}" created successfully!
+              </div>
+              <p style={{ marginBottom: '1.5rem', color: 'rgba(255, 255, 255, 0.8)' }}>
+                You can now invite team members to collaborate on this project.
+                This step is optional - you can skip it and invite members later.
+              </p>
+              <TeamManagement
+                projectId={createdProject.id}
+                currentUserRole="owner"
+                onClose={null}
+              />
+            </div>
+          )}
+
           {/* Error Display */}
           {error && (
             <div className="error-message">
@@ -461,6 +486,33 @@ const CreateProjectDialog = ({ isOpen, onClose }) => {
                   disabled={loading}
                 >
                   {loading ? 'Creating...' : 'Create Project'}
+                </button>
+              </>
+            )}
+
+            {step === 3 && (
+              <>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    onClose();
+                    resetForm();
+                  }}
+                  disabled={loading}
+                >
+                  Skip for Now
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => {
+                    onClose();
+                    resetForm();
+                  }}
+                  disabled={loading}
+                >
+                  Done
                 </button>
               </>
             )}
