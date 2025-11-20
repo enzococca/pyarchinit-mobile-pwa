@@ -480,7 +480,7 @@ export default function VideoRecorder({ onRecordingComplete }) {
 
       {/* Recording Controls */}
       {isRecording && !recordedVideo && (
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', position: 'relative', zIndex: 100 }}>
           {!isPaused ? (
             <button
               onClick={pauseRecording}
