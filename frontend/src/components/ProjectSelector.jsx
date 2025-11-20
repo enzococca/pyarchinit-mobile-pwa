@@ -119,12 +119,15 @@ const ProjectSelector = ({ onCreateNew }) => {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="project-dropdown">
+        <div className="project-dropdown" onClick={(e) => e.stopPropagation()}>
           <div className="dropdown-header">
             <h3>Your Projects ({projects.length})</h3>
             <button
               className="close-btn"
-              onClick={() => setIsOpen(false)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsOpen(false);
+              }}
               aria-label="Close"
             >
               ✕
