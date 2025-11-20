@@ -205,8 +205,8 @@ const CreateProjectDialog = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="dialog-backdrop">
-      <div className="create-project-dialog">
+    <div className="dialog-backdrop" onClick={handleClose}>
+      <div className="create-project-dialog" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="dialog-header">
           <h2>Create New Project</h2>
