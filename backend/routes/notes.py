@@ -306,3 +306,172 @@ async def delete_note(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error deleting note: {str(e)}")
+
+
+# Pydantic models for confirm endpoint
+class ConfirmNoteRequest(BaseModel):
+    extracted_fields: dict
+    entity_type: str = "US"
+    target_table: str = "us_table"
+    force_action: Optional[str] = None  # 'merge' or 'overwrite'
+
+
+@router.post("/{note_id}/confirm")
+async def confirm_note(
+    note_id: int,
+    request: ConfirmNoteRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Confirm and save note interpretation to PyArchInit database
+
+    Takes the AI-extracted archaeological data and inserts it into
+    the appropriate PyArchInit table (e.g., us_table for stratigraphic units).
+
+    Handles duplicate detection and allows force actions (merge/overwrite).
+    """
+    try:
+        from sqlalchemy import text
+
+        # Get note from database
+        query = text("SELECT * FROM mobile_notes WHERE id = :note_id")
+        result = db.execute(query, {'note_id': note_id}).fetchone()
+
+        if not result:
+            raise HTTPException(status_code=404, detail="Note not found")
+
+        note = dict(result._mapping)
+
+        # Verify note has been processed
+        if note['status'] != 'processed':
+            raise HTTPException(
+                status_code=400,
+                detail=f"Note must be processed first. Current status: {note['status']}"
+            )
+
+        # Verify note has interpretation
+        if not note['ai_interpretation']:
+            raise HTTPException(
+                status_code=400,
+                detail="Note has no AI interpretation to save"
+            )
+
+        fields = request.extracted_fields
+        target_table = request.target_table
+        force_action = request.force_action
+
+        # Check for duplicates (for US entities)
+        if target_table == 'us_table' and not force_action:
+            sito = fields.get('sito', '')
+            area = fields.get('area', '')
+            us = fields.get('us', '')
+
+            if sito and area and us:
+                check_query = text(f"""
+                    SELECT COUNT(*) FROM {target_table}
+                    WHERE sito = :sito AND area = :area AND us = :us
+                """)
+                count = db.execute(check_query, {
+                    'sito': sito,
+                    'area': area,
+                    'us': us
+                }).scalar()
+
+                if count > 0:
+                    raise HTTPException(
+                        status_code=409,
+                        detail=f"US already exists: {sito}, Area {area}, US {us}"
+                    )
+
+        # Build INSERT query dynamically based on provided fields
+        columns = list(fields.keys())
+        placeholders = [f":{col}" for col in columns]
+
+        insert_query = text(f"""
+            INSERT INTO {target_table} ({', '.join(columns)})
+            VALUES ({', '.join(placeholders)})
+        """)
+
+        # Execute insert
+        db.execute(insert_query, fields)
+
+        # Update note status to 'validated'
+        update_query = text("""
+            UPDATE mobile_notes
+            SET status = :status, updated_at = :updated_at
+            WHERE id = :note_id
+        """)
+
+        db.execute(update_query, {
+            'status': 'validated',
+            'updated_at': datetime.utcnow(),
+            'note_id': note_id
+        })
+
+        db.commit()
+
+        return {
+            "success": True,
+            "message": "Note confirmed and saved to database",
+            "note_id": note_id,
+            "target_table": target_table,
+            "entity_type": request.entity_type
+        }
+
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error saving note: {str(e)}")
+
+
+@router.post("/{note_id}/reject")
+async def reject_note(
+    note_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Reject a note - marks it as rejected without saving to database
+
+    Use this when the AI interpretation is incorrect or the note
+    should not be saved to the PyArchInit database.
+    """
+    try:
+        from sqlalchemy import text
+
+        # Get note from database
+        query = text("SELECT * FROM mobile_notes WHERE id = :note_id")
+        result = db.execute(query, {'note_id': note_id}).fetchone()
+
+        if not result:
+            raise HTTPException(status_code=404, detail="Note not found")
+
+        # Update note status to 'rejected'
+        update_query = text("""
+            UPDATE mobile_notes
+            SET status = :status, updated_at = :updated_at
+            WHERE id = :note_id
+        """)
+
+        db.execute(update_query, {
+            'status': 'rejected',
+            'updated_at': datetime.utcnow(),
+            'note_id': note_id
+        })
+
+        db.commit()
+
+        return {
+            "success": True,
+            "message": "Note rejected successfully",
+            "note_id": note_id
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error rejecting note: {str(e)}")
