@@ -286,6 +286,13 @@ export default function App() {
           </div>
           <div className="header-center">
             <ProjectSelector onCreateNew={() => setShowCreateProject(true)} />
+            <button
+              onClick={() => setShowCreateProject(true)}
+              className="btn-create-project"
+              title="Create New Project"
+            >
+              + New Project
+            </button>
           </div>
           <div className="header-right">
             <button
@@ -335,6 +342,14 @@ export default function App() {
         <DatabaseSettings
           onClose={() => setShowDbSettings(false)}
           onLogout={handleLogout}
+        />
+      )}
+
+      {/* Create Project Dialog */}
+      {showCreateProject && (
+        <CreateProjectDialog
+          isOpen={showCreateProject}
+          onClose={() => setShowCreateProject(false)}
         />
       )}
 
@@ -788,6 +803,33 @@ export default function App() {
 
         .btn-logout:hover {
           background: rgba(255,100,100,0.5);
+        }
+
+        .btn-create-project {
+          background: rgba(76, 175, 80, 0.9);
+          border: none;
+          color: white;
+          padding: 0.5rem 1rem;
+          border-radius: 20px;
+          cursor: pointer;
+          font-size: 0.9rem;
+          font-weight: 600;
+          transition: all 0.2s;
+          margin-top: 0.5rem;
+          display: inline-block;
+        }
+
+        .btn-create-project:hover {
+          background: rgba(76, 175, 80, 1);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .header-center {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.5rem;
         }
 
         .status {
