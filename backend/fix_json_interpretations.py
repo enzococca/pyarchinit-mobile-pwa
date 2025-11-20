@@ -5,20 +5,21 @@ This script converts Python dict string representations (with single quotes)
 to proper JSON format (with double quotes) for existing notes.
 
 Run this script once to fix all existing notes in the database.
+Supports both SQLite and PostgreSQL databases based on DB_MODE.
 """
 
 import sys
 import json
 import ast
-from sqlalchemy import create_engine, text
-from config import settings
+from sqlalchemy import text
+from services.db_manager import db_manager
 
 def fix_interpretations():
     """Fix all ai_interpretation fields with improper JSON format"""
 
-    # Create database engine - use SQLite path from settings
-    db_url = f"sqlite:///{settings.SQLITE_DB_PATH}"
-    engine = create_engine(db_url)
+    # Use db_manager to get the correct engine (SQLite or PostgreSQL)
+    print(f"📊 Database mode: {db_manager.mode}")
+    engine = db_manager.get_engine()
 
     print("🔧 Starting migration to fix ai_interpretation JSON format...")
 
