@@ -1020,50 +1020,7 @@ async def upload_audio_note(
         "message": "Nota caricata. Processing avviato."
     }
 
-@app.post("/api/notes/{note_id}/process")
-async def process_note(note_id: int, db: Session = Depends(get_db)):
-    """
-    Processa nota vocale:
-    1. Trascrizione con Whisper
-    2. Interpretazione con Claude AI
-    """
-    note = db.query(MobileNote).filter(MobileNote.id == note_id).first()
-    if not note:
-        raise HTTPException(status_code=404, detail="Nota non trovata")
-    
-    try:
-        # Processing completo
-        result = ai_interpreter.process_audio_note(
-            Path(note.audio_path),
-            note.site_context
-        )
-        
-        if result['status'] == 'error':
-            raise Exception(result['error'])
-        
-        # Update record with transcription and interpretation
-        note.transcription = result['transcription']['text']
-        note.transcription_confidence = result['transcription']['confidence']
-        note.detected_language = result['transcription'].get('language', 'it')
-        note.ai_interpretation = json.dumps(result['interpretation'], ensure_ascii=False)
-        note.ai_confidence = result['interpretation']['confidence']
-        note.suggested_entity_type = result['interpretation']['entity_type']
-        note.suggested_table = result['interpretation']['target_table']
-        note.status = 'processed'
-        
-        db.commit()
-        
-        return {
-            "status": "success",
-            "note_id": note.id,
-            "transcription": result['transcription'],
-            "interpretation": result['interpretation']
-        }
-        
-    except Exception as e:
-        note.status = 'error'
-        db.commit()
-        raise HTTPException(status_code=500, detail=f"Errore processing: {str(e)}")
+# Endpoint /api/notes/{note_id}/process rimosso - ora gestito dal router notes.py
 
 @app.get("/api/notes")
 async def list_notes(

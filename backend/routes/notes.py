@@ -115,7 +115,7 @@ async def upload_audio(
         raise HTTPException(status_code=500, detail=f"Error uploading audio: {str(e)}")
 
 
-@router.post("/notes/{note_id}/process")
+@router.post("/{note_id}/process")
 async def process_note(
     note_id: int,
     language: Optional[str] = None,
