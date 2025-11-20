@@ -38,7 +38,16 @@ export default function Login({ onLoginSuccess, onSwitchToRegister }) {
         onLoginSuccess(data);
       } else {
         const errorData = await response.json();
-        setError(errorData.detail || 'Login failed');
+        const errorMessage = errorData.detail || 'Login failed';
+
+        // Check if it's a pending approval error
+        if (response.status === 403 && errorMessage.toLowerCase().includes('pending')) {
+          setError('Il tuo account è in attesa di approvazione da parte di un amministratore. Riceverai conferma quando sarà approvato.');
+        } else if (response.status === 403 && errorMessage.toLowerCase().includes('rejected')) {
+          setError('La tua richiesta di registrazione è stata rifiutata. Contatta l\'amministratore per maggiori informazioni.');
+        } else {
+          setError(errorMessage);
+        }
       }
     } catch (err) {
       console.error('Login error:', err);

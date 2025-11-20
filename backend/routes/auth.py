@@ -84,9 +84,9 @@ async def register(
     Register new user
 
     - Uses SEPARATE AUTH DATABASE (auth.db)
-    - Creates user account (auto-approved for multi-project system)
-    - Automatically creates personal workspace for new user
-    - Returns access token and user info with default project_id
+    - First user is auto-approved and becomes admin
+    - Subsequent users require admin approval
+    - Returns access token only if approved, otherwise returns pending status
     """
     # Register user
     user = AuthService.register_user(
@@ -96,7 +96,22 @@ async def register(
         db=db
     )
 
-    # Create personal workspace for user
+    # Get approval status with fallback
+    approval_status = getattr(user, 'approval_status', 'approved')
+
+    # If user is pending approval, don't create workspace yet and don't return token
+    if approval_status == 'pending':
+        return {
+            "status": "pending",
+            "message": "Registration successful! Your account is pending admin approval.",
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "name": user.name
+            }
+        }
+
+    # User is approved (first user), create personal workspace
     try:
         db_manager = get_db_manager()
         project_id = db_manager.create_personal_workspace(
@@ -111,7 +126,7 @@ async def register(
             detail=f"Failed to create personal workspace: {str(e)}"
         )
 
-    # Generate token
+    # Generate token for approved user
     # Handle both Enum (PostgreSQL) and String (SQLite) for role
     role_str = user.role.value if hasattr(user.role, 'value') else user.role
 
@@ -344,6 +359,7 @@ async def approve_user(
 
     Requires: Admin role
     Changes user approval_status from 'pending' to 'approved'
+    Creates personal workspace for the approved user
     """
     from sqlalchemy import text
 
@@ -352,12 +368,29 @@ async def approve_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    # Check if user is already approved
+    current_status = getattr(user, 'approval_status', 'pending')
+    if current_status == 'approved':
+        raise HTTPException(status_code=400, detail="User is already approved")
+
     # Update approval status
     db.execute(
         text("UPDATE users SET approval_status = 'approved' WHERE id = :user_id"),
         {"user_id": user_id}
     )
     db.commit()
+
+    # Create personal workspace for the newly approved user
+    try:
+        db_manager = get_db_manager()
+        project_id = db_manager.create_personal_workspace(
+            user_id=user.id,
+            user_name=user.name
+        )
+    except Exception as e:
+        # Don't rollback approval, just log the error
+        print(f"Warning: Failed to create workspace for approved user {user.id}: {str(e)}")
+        # Continue with approval even if workspace creation fails
 
     return {
         "success": True,

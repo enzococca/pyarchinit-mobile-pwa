@@ -401,8 +401,8 @@ export default function App() {
               🎨 3D Scan Upload
             </button>
             {currentUser?.role === 'admin' && (
-              <button onClick={() => setCurrentView('admin')}>
-                👥 User Management
+              <button onClick={() => setCurrentView('admin')} className="btn-admin">
+                👥 Admin Panel
               </button>
             )}
             <button onClick={handleSync} disabled={!online || syncStats.total === 0}>
@@ -468,7 +468,7 @@ export default function App() {
 
       {/* Admin Panel (Admin Only) */}
       {currentView === 'admin' && currentUser?.role === 'admin' && (
-        <div className="view-panel">
+        <div className="view-panel admin-panel-view">
           <button onClick={() => setCurrentView('home')} className="btn-back">
             ← Back
           </button>
@@ -947,6 +947,12 @@ export default function App() {
           padding: 0 !important;
         }
 
+        .admin-panel-view {
+          padding: 0 !important;
+          background: transparent !important;
+          box-shadow: none !important;
+        }
+
         .secondary-actions {
           display: flex;
           flex-direction: column;
@@ -960,6 +966,13 @@ export default function App() {
           border-radius: 6px;
           cursor: pointer;
           font-size: 0.95rem;
+        }
+
+        .btn-admin {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+          color: white !important;
+          border: none !important;
+          font-weight: 600;
         }
 
         .btn-back {

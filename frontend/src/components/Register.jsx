@@ -13,10 +13,12 @@ export default function Register({ onRegisterSuccess, onSwitchToLogin }) {
   const [role, setRole] = useState('archaeologist');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   const handleRegister = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccessMessage('');
 
     // Validate passwords match
     if (password !== confirmPassword) {
@@ -49,14 +51,30 @@ export default function Register({ onRegisterSuccess, onSwitchToLogin }) {
       if (response.ok) {
         const data = await response.json();
 
-        // Store auth token
-        localStorage.setItem('auth_token', data.access_token);
-        localStorage.setItem('user_email', data.user.email);
-        localStorage.setItem('user_name', data.user.name);
-        localStorage.setItem('user_role', data.user.role);
+        // Check if registration is pending approval
+        if (data.status === 'pending') {
+          // User registered but needs approval
+          setSuccessMessage('Account creato con successo! Il tuo account è in attesa di approvazione da parte di un amministratore. Riceverai una notifica quando sarà approvato.');
 
-        // Notify parent
-        onRegisterSuccess(data);
+          // Clear form
+          setName('');
+          setEmail('');
+          setPassword('');
+          setConfirmPassword('');
+          setRole('archaeologist');
+        } else if (data.access_token) {
+          // User is approved (first user becomes admin automatically)
+          localStorage.setItem('auth_token', data.access_token);
+          localStorage.setItem('user_email', data.user.email);
+          localStorage.setItem('user_name', data.user.name);
+          localStorage.setItem('user_role', data.user.role);
+
+          // Notify parent
+          onRegisterSuccess(data);
+        } else {
+          // Unexpected response
+          setError('Unexpected response from server. Please try again.');
+        }
       } else {
         const errorData = await response.json();
         setError(errorData.detail || 'Registration failed');
@@ -82,6 +100,12 @@ export default function Register({ onRegisterSuccess, onSwitchToLogin }) {
           {error && (
             <div className="error-banner">
               ⚠️ {error}
+            </div>
+          )}
+
+          {successMessage && (
+            <div className="success-banner">
+              ✓ {successMessage}
             </div>
           )}
 
@@ -226,6 +250,16 @@ export default function Register({ onRegisterSuccess, onSwitchToLogin }) {
           margin-bottom: 1rem;
           font-size: 0.9rem;
           border-left: 4px solid #c62828;
+        }
+
+        .success-banner {
+          background: #e8f5e9;
+          color: #2e7d32;
+          padding: 1rem;
+          border-radius: 8px;
+          margin-bottom: 1rem;
+          font-size: 0.9rem;
+          border-left: 4px solid #4caf50;
         }
 
         .form-group {
