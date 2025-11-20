@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from datetime import datetime
 from pathlib import Path
 import shutil
+import json
 
 from backend.services.auth_service import get_current_user
 from backend.models.auth import User
@@ -190,7 +191,7 @@ async def process_note(
             'transcription': transcription_result['text'],
             'transcription_confidence': transcription_result['confidence'],
             'detected_language': transcription_result['language'],
-            'ai_interpretation': str(interpretation) if interpretation else None,
+            'ai_interpretation': json.dumps(interpretation, ensure_ascii=False) if interpretation else None,
             'ai_confidence': ai_confidence,
             'status': 'processed',
             'updated_at': datetime.utcnow(),
