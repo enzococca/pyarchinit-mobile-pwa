@@ -165,8 +165,12 @@ async def process_note(
 
         if settings.ANTHROPIC_API_KEY and not settings.ANTHROPIC_API_KEY.startswith("sk-ant-test"):
             interpreter = ArchaeologicalAIInterpreter()
-            interpretation_result = interpreter.interpret(transcription_result['text'])
-            interpretation = interpretation_result.get('structured_data', {})
+            interpretation_result = interpreter.interpret_note(
+                transcription_result['text'],
+                note.get('site_context'),
+                transcription_result['language']
+            )
+            interpretation = interpretation_result.get('extracted_fields', {})
             ai_confidence = interpretation_result.get('confidence', 0.0)
 
         # Update note in database
