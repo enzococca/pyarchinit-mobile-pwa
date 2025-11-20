@@ -23,7 +23,7 @@ from backend.services.ai_processor import ArchaeologicalAIInterpreter
 from backend.services.stratigraphic_utils import parse_relationships, format_relationships_for_db
 from backend.services.auth_service import get_current_user
 from backend.models.auth import User
-from backend.routes import auth, media, database, notes, tropy, annotations, projects
+from backend.routes import auth, media, database, notes, tropy, annotations, projects, migrations
 
 
 # Pydantic models for API requests
@@ -131,6 +131,7 @@ app.include_router(database.router)
 app.include_router(notes.router)
 app.include_router(tropy.router)
 app.include_router(annotations.router)
+app.include_router(migrations.router)  # Temporary migration endpoints
 
 # Inizializza servizi
 image_processor = ImageProcessor()
