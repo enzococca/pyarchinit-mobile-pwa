@@ -184,7 +184,9 @@ export default function TropyIntegration({ onClose }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              zIndex: 10,
+              pointerEvents: 'auto'
             }}
             onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
             onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
