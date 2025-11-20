@@ -405,8 +405,6 @@ async def get_my_media(
 async def download_media(
     media_id: int,
     size: str = "original",  # "original" | "thumb" | "resize"
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_user_workspace_db)
 ):
     """
     Download media file in specified size
@@ -416,21 +414,63 @@ async def download_media(
     try:
         from fastapi.responses import FileResponse
         import os
+        from backend.services.dynamic_db_manager import get_db_manager
+        from sqlalchemy.orm import Session
 
-        # Get media record
-        media_record = media_processor.get_media_by_id(db, media_id)
+        # Search across all project databases to find the media
+        # This is necessary because media can belong to any project
+        db_manager = get_db_manager()
+
+        # Get auth database to find all projects
+        auth_engine = db_manager.get_auth_db()
+        with auth_engine.connect() as auth_conn:
+            from sqlalchemy import text
+            projects = auth_conn.execute(text("SELECT id FROM projects")).fetchall()
+
+        media_record = None
+        project_db_session = None
+
+        # Search each project database for the media
+        for project_row in projects:
+            project_id = project_row[0]
+            try:
+                project_engine = db_manager.get_project_db(project_id)
+                project_db_session = Session(project_engine)
+
+                # Try to find media in this project's database
+                media_record = media_processor.get_media_by_id(project_db_session, media_id)
+
+                if media_record:
+                    # Found it! Break out of loop
+                    break
+                else:
+                    # Not in this project, close session and continue
+                    project_db_session.close()
+                    project_db_session = None
+
+            except Exception as e:
+                # Error accessing this project's database, skip it
+                if project_db_session:
+                    project_db_session.close()
+                    project_db_session = None
+                continue
+
         if not media_record:
             raise HTTPException(status_code=404, detail="Media not found")
 
         # Determine file path based on size
         if size == "thumb":
-            thumb_record = media_processor.get_media_thumb_by_media_id(db, media_id)
+            thumb_record = media_processor.get_media_thumb_by_media_id(project_db_session, media_id)
             if not thumb_record:
+                if project_db_session:
+                    project_db_session.close()
                 raise HTTPException(status_code=404, detail="Thumbnail not found")
             filepath = thumb_record['filepath']
         elif size == "resize":
-            thumb_record = media_processor.get_media_thumb_by_media_id(db, media_id)
+            thumb_record = media_processor.get_media_thumb_by_media_id(project_db_session, media_id)
             if not thumb_record:
+                if project_db_session:
+                    project_db_session.close()
                 raise HTTPException(status_code=404, detail="Resized image not found")
             filepath = thumb_record['path_resize']
         else:  # original
@@ -438,12 +478,14 @@ async def download_media(
 
         # Check if file exists
         if not os.path.exists(filepath):
+            if project_db_session:
+                project_db_session.close()
             raise HTTPException(status_code=404, detail="File not found on disk")
 
         # Determine proper MIME type
         # Access columns by name using dictionary-style access
         filetype = media_record['filetype'].lower() if media_record['filetype'] else ""
-        mediatype = media_record['media_type'].lower() if media_record['media_type'] else ""
+        mediatype = media_record['mediatype'].lower() if media_record['mediatype'] else ""
 
         # Map to proper MIME types
         mime_type_map = {
@@ -466,6 +508,10 @@ async def download_media(
 
         # Try to get MIME type from extension, fallback to constructed type
         mime_type = mime_type_map.get(filetype, f"{mediatype}/{filetype}") if filetype else "application/octet-stream"
+
+        # Close database session before returning file
+        if project_db_session:
+            project_db_session.close()
 
         return FileResponse(
             path=filepath,
