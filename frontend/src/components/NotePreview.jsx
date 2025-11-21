@@ -322,10 +322,12 @@ function NotePreview({ note, onClose, onSave, onRefresh }) {
                     <strong>Target Table:</strong>
                     <span>{interpretation.target_table}</span>
                   </div>
-                  <div className="info-row">
-                    <strong>Confidence:</strong>
-                    <span>{Math.round(interpretation.confidence * 100)}%</span>
-                  </div>
+                  {interpretation.confidence !== undefined && interpretation.confidence !== null && (
+                    <div className="info-row">
+                      <strong>Confidence:</strong>
+                      <span>{Math.round((interpretation.confidence || 0) * 100)}%</span>
+                    </div>
+                  )}
                 </div>
               </div>
 

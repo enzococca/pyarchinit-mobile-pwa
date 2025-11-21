@@ -147,11 +147,18 @@ async def process_note(
 
         # Check if already processed
         if note['status'] == 'processed':
+            # Parse interpretation and add confidence if available
+            interpretation = note['ai_interpretation']
+            if isinstance(interpretation, str):
+                interpretation = json.loads(interpretation) if interpretation else {}
+            if interpretation and 'confidence' not in interpretation and note.get('ai_confidence'):
+                interpretation['confidence'] = note['ai_confidence']
+
             return {
                 "note_id": note_id,
                 "status": "already_processed",
                 "transcription": note['transcription'],
-                "interpretation": note['ai_interpretation']
+                "interpretation": interpretation
             }
 
         # Step 1: Transcribe audio with Whisper
@@ -176,6 +183,10 @@ async def process_note(
             )
             interpretation = interpretation_result.get('extracted_fields', {})
             ai_confidence = interpretation_result.get('confidence', 0.0)
+
+            # Add confidence to interpretation for frontend
+            if interpretation:
+                interpretation['confidence'] = ai_confidence
 
         # Update note in database
         update_query = text("""
@@ -253,18 +264,28 @@ async def get_notes(
 
         results = db.execute(query, params).fetchall()
 
-        notes = [
-            NoteResponse(
+        notes = []
+        for row in results:
+            # Parse and add confidence to interpretation
+            interpretation = row.ai_interpretation
+            if interpretation and isinstance(interpretation, str):
+                try:
+                    interp_dict = json.loads(interpretation)
+                    if 'confidence' not in interp_dict and row.ai_confidence:
+                        interp_dict['confidence'] = row.ai_confidence
+                        interpretation = json.dumps(interp_dict, ensure_ascii=False)
+                except json.JSONDecodeError:
+                    pass  # Keep original if parsing fails
+
+            notes.append(NoteResponse(
                 id=row.id,
                 audio_filename=row.audio_filename,
                 transcription=row.transcription,
                 detected_language=row.detected_language,
-                ai_interpretation=row.ai_interpretation,
+                ai_interpretation=interpretation,
                 status=row.status,
                 created_at=row.created_at
-            )
-            for row in results
-        ]
+            ))
 
         # Get total count
         count_query = text(f"SELECT COUNT(*) FROM mobile_notes {where_clause}")
