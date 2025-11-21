@@ -122,6 +122,14 @@ function NotePreview({ note, onClose, onSave, onRefresh }) {
       return;
     }
 
+    // Debug: Check project ID
+    const projectId = localStorage.getItem('currentProjectId');
+    console.log('[NotePreview] Current project ID:', projectId);
+    if (!projectId) {
+      alert('No project selected. Please select a project from the dropdown first.');
+      return;
+    }
+
     // Check if note has been synced to server
     if (!note.serverNoteId) {
       alert('This note must be synced to the server first. Please sync your notes and try again.');
@@ -193,8 +201,11 @@ function NotePreview({ note, onClose, onSave, onRefresh }) {
       console.log('[NotePreview] Request data prepared, sending to backend...');
       console.log('[NotePreview] Entity type:', safeEntityType, 'Target table:', safeTargetTable);
 
+      const headers = getAuthHeaders();
+      console.log('[NotePreview] Request headers:', headers);
+
       const response = await axios.post(`${API_BASE}/notes/${note.serverNoteId}/confirm`, requestData, {
-        headers: getAuthHeaders()
+        headers: headers
       });
       console.log('[NotePreview] Backend response received successfully');
 
