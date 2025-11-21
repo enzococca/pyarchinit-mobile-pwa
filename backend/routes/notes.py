@@ -181,12 +181,9 @@ async def process_note(
                 note.get('site_context'),
                 transcription_result['language']
             )
-            interpretation = interpretation_result.get('extracted_fields', {})
+            # Keep the full interpretation_result (includes entity_type, target_table, etc.)
+            interpretation = interpretation_result
             ai_confidence = interpretation_result.get('confidence', 0.0)
-
-            # Add confidence to interpretation for frontend
-            if interpretation:
-                interpretation['confidence'] = ai_confidence
 
         # Update note in database
         update_query = text("""
