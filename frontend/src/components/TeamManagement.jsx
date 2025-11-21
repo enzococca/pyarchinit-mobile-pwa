@@ -194,10 +194,10 @@ const TeamManagement = ({ projectId, currentUserRole, onClose }) => {
               <div key={member.user_id} className="member-card">
                 <div className="member-info">
                   <div className="member-avatar">
-                    {member.name.charAt(0).toUpperCase()}
+                    {(member.name || member.email || '?').charAt(0).toUpperCase()}
                   </div>
                   <div className="member-details">
-                    <div className="member-name">{member.name}</div>
+                    <div className="member-name">{member.name || member.email || 'Unknown'}</div>
                     <div className="member-email">{member.email}</div>
                   </div>
                 </div>
@@ -210,7 +210,7 @@ const TeamManagement = ({ projectId, currentUserRole, onClose }) => {
                   {/* Remove button (only for owner/admin, can't remove owner) */}
                   {canManageTeam && member.role !== 'owner' && (
                     <button
-                      onClick={() => handleRemoveMember(member.user_id, member.name)}
+                      onClick={() => handleRemoveMember(member.user_id, member.name || member.email || 'this member')}
                       disabled={loading}
                       className="btn-remove"
                       title="Remove member"

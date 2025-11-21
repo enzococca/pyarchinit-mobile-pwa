@@ -95,6 +95,7 @@ class TeamMemberInfo(BaseModel):
     """Team member information"""
     user_id: int
     email: str
+    name: Optional[str] = None
     role: UserRole
     permissions: ProjectPermissions
     joined_at: datetime

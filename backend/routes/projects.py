@@ -303,7 +303,7 @@ async def get_project_detail(
         # Get team members
         team_rows = db.execute(
             text("""
-                SELECT pt.user_id, u.email, pt.role, pt.permissions, pt.joined_at
+                SELECT pt.user_id, u.email, u.name, pt.role, pt.permissions, pt.joined_at
                 FROM project_teams pt
                 INNER JOIN users u ON pt.user_id = u.id
                 WHERE pt.project_id = :project_id
@@ -314,13 +314,14 @@ async def get_project_detail(
 
         team_members = []
         for team_row in team_rows:
-            member_permissions = json.loads(team_row[3]) if team_row[3] else {}
+            member_permissions = json.loads(team_row[4]) if team_row[4] else {}
             team_members.append(TeamMemberInfo(
                 user_id=team_row[0],
                 email=team_row[1],
-                role=team_row[2],
+                name=team_row[2],
+                role=team_row[3],
                 permissions=ProjectPermissions(**member_permissions),
-                joined_at=team_row[4]
+                joined_at=team_row[5]
             ))
 
         project_info = _build_project_info(project_row, role, permissions, team_members)
@@ -470,9 +471,9 @@ async def add_team_member(
         if not _check_permission(db, project_id, current_user.id, "can_invite"):
             raise HTTPException(status_code=403, detail="Permission denied: cannot invite users")
 
-        # Find user by email
+        # Find user by email (also get name)
         user_row = db.execute(
-            text("SELECT id FROM users WHERE email = :email"),
+            text("SELECT id, name FROM users WHERE email = :email"),
             {"email": member_data.email}
         ).fetchone()
 
@@ -480,6 +481,7 @@ async def add_team_member(
             raise HTTPException(status_code=404, detail=f"User with email '{member_data.email}' not found")
 
         new_user_id = user_row[0]
+        user_name = user_row[1]
 
         # Check if already member
         existing = db.execute(
@@ -520,6 +522,7 @@ async def add_team_member(
         team_member = TeamMemberInfo(
             user_id=new_user_id,
             email=member_data.email,
+            name=user_name,
             role=member_data.role,
             permissions=ProjectPermissions(**permissions),
             joined_at=datetime.now()
