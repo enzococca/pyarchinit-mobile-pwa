@@ -94,18 +94,26 @@ export async function syncAll(onProgress) {
  */
 async function syncAudioNote(queueItem) {
   const note = await getAudioNote(queueItem.localId);
-  
+
+  // Verify project ID is available
+  const projectId = localStorage.getItem('currentProjectId');
+  if (!projectId) {
+    throw new Error('No project selected. Please select a project before syncing audio notes.');
+  }
+
   // Prepare FormData
   const formData = new FormData();
 
   // Convert audio from base64 to Blob
   const audioBlob = base64ToBlob(note.audioBlob);
   formData.append('file', audioBlob, note.filename || 'audio.webm');
-  
+
   formData.append('sito', note.sito);
   if (note.recordedBy) formData.append('recorded_by', note.recordedBy);
   if (note.gpsLat) formData.append('gps_lat', note.gpsLat);
   if (note.gpsLon) formData.append('gps_lon', note.gpsLon);
+
+  console.log('[syncService] Uploading audio note with project ID:', projectId);
 
   // Upload
   const response = await axios.post(`${API_BASE}/notes/upload-audio`, formData, {

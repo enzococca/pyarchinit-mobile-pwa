@@ -285,16 +285,6 @@ export default function App() {
               )}
             </div>
           </div>
-          <div className="header-center">
-            <ProjectSelector onCreateNew={() => setShowCreateProject(true)} />
-            <button
-              onClick={() => setShowCreateProject(true)}
-              className="btn-create-project"
-              title="Create New Project"
-            >
-              + New Project
-            </button>
-          </div>
           <div className="header-right">
             <ProjectNotifications />
             <button
@@ -321,6 +311,18 @@ export default function App() {
             </div>
           </div>
         </header>
+
+        {/* Project Bar */}
+        <div className="project-bar">
+          <ProjectSelector onCreateNew={() => setShowCreateProject(true)} />
+          <button
+            onClick={() => setShowCreateProject(true)}
+            className="btn-create-project"
+            title="Create New Project"
+          >
+            + New Project
+          </button>
+        </div>
 
       {/* Sync Progress Banner */}
       {syncing && (
@@ -825,6 +827,17 @@ export default function App() {
           background: rgba(76, 175, 80, 1);
           transform: translateY(-2px);
           box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        /* Project Bar */
+        .project-bar {
+          background: #f5f5f5;
+          padding: 0.75rem 1rem;
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          border-bottom: 1px solid #e0e0e0;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
 
         .header-center {

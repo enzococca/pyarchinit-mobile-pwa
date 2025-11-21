@@ -51,10 +51,14 @@ const ProjectNotifications = ({ onProjectSelect }) => {
 
   const handleOpen = () => {
     setIsOpen(true);
-    // Aggiorna timestamp visualizzazione
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+    // Aggiorna timestamp visualizzazione quando chiude
     const now = new Date().toISOString();
     localStorage.setItem('projectNotificationsLastSeen', now);
-    setLastSeenTimestamp(new Date(now));
+    // NON aggiorniamo lastSeenTimestamp qui per evitare re-render immediato
   };
 
   const handleProjectClick = async (projectId) => {
@@ -105,7 +109,7 @@ const ProjectNotifications = ({ onProjectSelect }) => {
               <h3>New Projects</h3>
               <button
                 className="close-btn"
-                onClick={() => setIsOpen(false)}
+                onClick={handleClose}
                 aria-label="Close"
               >
                 ✕
@@ -148,7 +152,7 @@ const ProjectNotifications = ({ onProjectSelect }) => {
 
           <div
             className="notifications-backdrop"
-            onClick={() => setIsOpen(false)}
+            onClick={handleClose}
           />
         </>
       )}
