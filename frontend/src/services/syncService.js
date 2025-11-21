@@ -1,3 +1,4 @@
+import api from './api';
 import axios from 'axios';
 import {
   getSyncQueue,
@@ -12,15 +13,25 @@ import { API_BASE } from '../config/api';
 
 /**
  * Get authorization headers for API requests
+ * Includes X-Project-ID from localStorage for project context
  */
 function getAuthHeaders() {
   const token = localStorage.getItem('auth_token');
   if (!token) {
     throw new Error('No authentication token found. Please log in again.');
   }
-  return {
+
+  const headers = {
     'Authorization': `Bearer ${token}`
   };
+
+  // Add X-Project-ID if available (for multi-project support)
+  const projectId = localStorage.getItem('currentProjectId');
+  if (projectId) {
+    headers['X-Project-ID'] = projectId;
+  }
+
+  return headers;
 }
 
 /**

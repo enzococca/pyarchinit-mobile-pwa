@@ -10,6 +10,7 @@ import AdminPanel from './components/AdminPanel';
 import Login from './components/Login';
 import Register from './components/Register';
 import ProjectSelector from './components/ProjectSelector';
+import ProjectNotifications from './components/ProjectNotifications';
 import CreateProjectDialog from './components/CreateProjectDialog';
 import { ProjectProvider } from './context/ProjectContext';
 import {
@@ -295,6 +296,7 @@ export default function App() {
             </button>
           </div>
           <div className="header-right">
+            <ProjectNotifications />
             <button
               onClick={() => setShowDbSettings(true)}
               className="btn-settings"

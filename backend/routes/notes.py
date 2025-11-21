@@ -14,6 +14,7 @@ import json
 from backend.services.auth_service import get_current_user
 from backend.models.auth import User
 from backend.services.db_manager import get_db
+from backend.dependencies import get_current_project, get_project_db_session
 from backend.services.ai_processor import AudioTranscriber, ArchaeologicalAIInterpreter
 from backend.config import settings
 
@@ -43,7 +44,8 @@ async def upload_audio(
     gps_lat: Optional[float] = Form(None),
     gps_lon: Optional[float] = Form(None),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    project_id: int = Depends(get_current_project),
+    db: Session = Depends(get_project_db_session)
 ):
     """
     Upload audio note and save to database
@@ -121,7 +123,8 @@ async def process_note(
     note_id: int,
     language: Optional[str] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    project_id: int = Depends(get_current_project),
+    db: Session = Depends(get_project_db_session)
 ):
     """
     Process audio note: transcribe with Whisper + interpret with Claude
@@ -219,7 +222,8 @@ async def get_notes(
     limit: int = 50,
     offset: int = 0,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    project_id: int = Depends(get_current_project),
+    db: Session = Depends(get_project_db_session)
 ):
     """
     Get list of audio notes for current user
@@ -276,7 +280,8 @@ async def get_notes(
 async def delete_note(
     note_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    project_id: int = Depends(get_current_project),
+    db: Session = Depends(get_project_db_session)
 ):
     """Delete audio note"""
     try:
@@ -321,7 +326,8 @@ async def confirm_note(
     note_id: int,
     request: ConfirmNoteRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    project_id: int = Depends(get_current_project),
+    db: Session = Depends(get_project_db_session)
 ):
     """
     Confirm and save note interpretation to PyArchInit database
@@ -431,7 +437,8 @@ async def confirm_note(
 async def reject_note(
     note_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    project_id: int = Depends(get_current_project),
+    db: Session = Depends(get_project_db_session)
 ):
     """
     Reject a note - marks it as rejected without saving to database
